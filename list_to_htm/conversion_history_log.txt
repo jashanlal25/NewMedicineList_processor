@@ -1,0 +1,62 @@
+CONVERSION HISTORY LOG - HTML File Updates
+===========================================
+
+Date: January 23, 2026
+
+CHANGES MADE TO list.HTM FILE:
+
+1. FIXED WHATSAPP FUNCTIONALITY HEADER ISSUE
+   - Problem: Header appearing twice in WhatsApp output
+   - Solution: Updated generate_js_if_blocks_whatsapp to add header only once
+   - Location: Modified simpleOrder() function to ensure header appears once
+
+2. ADDED PERCENTAGE SYMBOLS TO DISCOUNT VALUES
+   - Problem: Discount values showing as "2" instead of "2%"
+   - Solution: Modified JavaScript to append % symbol to non-zero discount values
+   - Location: simpleOrder() function formatting logic
+
+3. HANDLED ZERO DISCOUNT WITH BONUS VALUES
+   - Problem: When discount was 0, bonus values weren't showing
+   - Solution: When discount is 0%, show bonus value in bonus column
+   - Location: simpleOrder() function conditional logic
+
+4. ADDED SIMPLE ORDER FORMAT FOR WHATSAPP BUTTON
+   - Problem: WhatsApp button needed simple format functionality
+   - Solution: Modified WhatsApp button to use simpleOrder() function
+   - Location: Line 4388 - changed onclick to simpleOrder()
+
+5. CHANGED PDF BUTTON FROM EVENT LISTENER TO DIRECT CALL
+   - Problem: PDF button not responding
+   - Solution: Changed from id="download" with event listener to direct onclick
+   - Location: Line 4389 - changed to onclick="generatePDF()"
+
+6. REMOVED CONFLICTING EVENT LISTENER
+   - Problem: Potential conflict between event listener and direct call
+   - Solution: Removed separate event listener to avoid conflicts
+   - Location: Removed lines 32887-32889
+
+7. UPDATED ROWS COUNT FOR PDF GENERATION
+   - Problem: PDF only processing 300 items instead of 386
+   - Solution: Changed hidden input value from 300 to 386
+   - Location: Line 4390 - value="386"
+
+8. FORMATTED OUTPUT AS REQUESTED
+   - Problem: Needed specific format with pipe separators
+   - Solution: Implemented format "Item (qty) X | Discount/Bonus"
+   - Location: simpleOrder() function output formatting
+
+FILES MODIFIED:
+- list.HTM: Main HTML file with all functional updates
+- conversion_history_log.txt: This log file
+
+FUNCTIONALITY ADDED/FIXED:
+- Send WhatsApp button: Now shows simple format with discount/bonus info
+- PDF Generation button: Now responds and processes all 386 items
+- Preview button: Continues to work as before
+- Print button: Continues to work as before
+
+FORMATTED OUTPUT EXAMPLE:
+Date: 23/01/2026
+Order from :
+Item Name (qty) 111 | 330
+Another Item (qty) 222 | 2.00%

@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="manifest" href="/static/manifest.json">
+    <title>Medicine List Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --bg-card: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --border-color: #e0e0e0;
+            --input-bg: #f8f9fa;
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            --bg-card: #1e1e2e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #aaa;
+            --border-color: #333;
+            --input-bg: #2a2a3e;
+            --shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: var(--input-bg);
+        }
+
+        .top-buttons {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 6px;
+            z-index: 1000;
+        }
+
+        .install-btn {
+            background: #198754;
+            color: white;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 30px;
+        }
+
+        .install-btn:hover {
+            background: #157347;
+        }
+
+        @media screen and (max-width: 768px) {
+            .top-buttons {
+                top: 6px;
+                right: 6px;
+                gap: 4px;
+            }
+
+            .theme-toggle {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+
+            .install-btn {
+                padding: 4px 6px;
+                font-size: 9px;
+                height: 28px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .top-buttons {
+                top: 5px;
+                right: 5px;
+                gap: 3px;
+            }
+
+            .theme-toggle {
+                width: 26px;
+                height: 26px;
+                font-size: 11px;
+            }
+
+            .install-btn {
+                padding: 3px 5px;
+                font-size: 8px;
+                height: 26px;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--input-bg);
+        }
+
+        .upload-area:hover {
+            border-color: #0d6efd;
+            background: var(--input-bg);
+        }
+
+        .upload-area.dragover {
+            border-color: #0d6efd;
+            background: rgba(13, 110, 253, 0.1);
+        }
+
+        .upload-area.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .upload-text strong {
+            color: #0d6efd;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 6px 3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-download {
+            background: #198754;
+            border-color: #198754;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #157347;
+            border-color: #157347;
+        }
+
+        .btn-copy {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: #0b5ed7;
+            border-color: #0b5ed7;
+        }
+
+        .btn-sort {
+            background: #fd7e14;
+            border-color: #fd7e14;
+            color: white;
+        }
+
+        .btn-sort:hover {
+            background: #e96b02;
+            border-color: #e96b02;
+        }
+
+        .btn-new {
+            background: #6f42c1;
+            border-color: #6f42c1;
+            color: white;
+        }
+
+        .btn-new:hover {
+            background: #5a32a3;
+            border-color: #5a32a3;
+        }
+
+        .btn-close {
+            background: #6c757d;
+            border-color: #6c757d;
+            color: white;
+            padding: 6px 12px;
+        }
+
+        .btn-close:hover {
+            background: #5c636a;
+            border-color: #5c636a;
+        }
+
+        .btn-primary {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0b5ed7;
+            border-color: #0b5ed7;
+        }
+
+        .editor-card {
+            border-left-color: #6f42c1;
+        }
+
+        .editor-badge {
+            background: #6f42c1;
+        }
+
+        .filename-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: var(--input-bg);
+            border-radius: 8px;
+        }
+
+        .filename-input label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .filename-input input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            width: 200px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .filename-input input:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        .btn-small {
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+            border-radius: 10px;
+            color: white;
+            margin: 5px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .markdown-box {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            color: #d4d4d4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            width: 100%;
+            border: 2px solid #333;
+            resize: vertical;
+        }
+
+        .markdown-box:focus {
+            outline: none;
+            border-color: #0d6efd;
+        }
+
+        .edit-hint {
+            font-size: 12px;
+            color: #999;
+            font-weight: normal;
+        }
+
+        .markdown-box::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .markdown-box::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 4px;
+        }
+
+        .markdown-box::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .section-title {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-name {
+            background: var(--input-bg);
+            padding: 8px 15px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 10px;
+            display: inline-block;
+            border: 1px solid var(--border-color);
+        }
+
+        .file-badge {
+            background: #0d6efd;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .settings-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--input-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-row input {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            width: 120px;
+            transition: border-color 0.3s;
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .input-row input:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        }
+
+        .input-suffix {
+            color: var(--text-secondary);
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .input-hint {
+            color: #888;
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .input-row input[type="text"] {
+            width: 150px;
+        }
+
+        .checkbox-group {
+            margin-top: 15px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            accent-color: #0d6efd;
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            margin-bottom: 20px;
+            border-left: 4px solid #0d6efd;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .result-title {
+            font-size: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .file-counter {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .max-reached {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .upload-section {
+            display: none;
+        }
+
+        .upload-section.show {
+            display: block;
+        }
+
+        .new-editor-section {
+            text-align: center;
+        }
+
+        .new-editor-section .card {
+            padding: 20px;
+        }
+
+        .new-editor-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .or-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .new-editor-section.hidden {
+            display: none;
+        }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 20px 0;
+            border-radius: 1px;
+        }
+
+        /* Responsive Design */
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 24px;
+                margin-bottom: 20px;
+            }
+
+            .card {
+                padding: 20px;
+                border-radius: 12px;
+            }
+
+            .upload-area {
+                padding: 25px 15px;
+            }
+
+            .upload-icon {
+                font-size: 36px;
+            }
+
+            .upload-text {
+                font-size: 14px;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .stat-item {
+                padding: 12px 20px;
+                width: 100%;
+            }
+
+            .stat-number {
+                font-size: 20px;
+            }
+
+            .stat-label {
+                font-size: 11px;
+            }
+
+            .settings-panel {
+                padding: 15px;
+            }
+
+            .input-group label {
+                font-size: 14px;
+            }
+
+            .input-row {
+                flex-wrap: wrap;
+            }
+
+            .input-row input {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            .input-row input[type="text"] {
+                width: 100%;
+            }
+
+            .checkbox-label {
+                font-size: 14px;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+                margin: 5px 3px;
+            }
+
+            .btn-small {
+                padding: 6px 8px;
+                font-size: 11px;
+            }
+
+            .actions {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+
+            .markdown-box {
+                padding: 15px;
+                font-size: 13px;
+                min-height: 250px;
+                max-height: 450px;
+            }
+
+            .section-title {
+                font-size: 16px;
+            }
+
+            .result-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .result-title {
+                font-size: 14px;
+                flex-wrap: wrap;
+            }
+
+            .file-badge {
+                font-size: 10px;
+                padding: 4px 10px;
+            }
+
+            .filename-input {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .filename-input input {
+                width: 100%;
+                flex: 1;
+            }
+
+            .filename-input label {
+                width: 100%;
+            }
+
+            .file-counter {
+                font-size: 12px;
+            }
+
+            .file-name {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            .error-message {
+                font-size: 13px;
+                padding: 12px;
+            }
+
+            .max-reached {
+                font-size: 13px;
+                padding: 10px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            .card {
+                padding: 15px;
+            }
+
+            .upload-area {
+                padding: 20px 10px;
+            }
+
+            .upload-icon {
+                font-size: 30px;
+                margin-bottom: 10px;
+            }
+
+            .upload-text {
+                font-size: 13px;
+            }
+
+            .stat-item {
+                padding: 10px 15px;
+            }
+
+            .stat-number {
+                font-size: 18px;
+            }
+
+            .btn {
+                padding: 8px 15px;
+                font-size: 13px;
+                width: 100%;
+            }
+
+            .btn-small {
+                width: auto;
+                padding: 5px 6px;
+                font-size: 10px;
+            }
+
+            .btn-close {
+                padding: 4px 8px;
+                font-size: 10px;
+            }
+
+            .markdown-box {
+                font-size: 12px;
+                padding: 12px;
+                min-height: 220px;
+                max-height: 400px;
+            }
+
+            .actions {
+                gap: 4px;
+                flex-wrap: wrap;
+            }
+
+            .section-title {
+                font-size: 14px;
+            }
+
+            .edit-hint {
+                font-size: 10px;
+            }
+
+            .input-suffix {
+                font-size: 14px;
+            }
+
+            .settings-panel {
+                padding: 12px;
+            }
+
+            .checkbox-label input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+            }
+        }
+
+        /* Tablet landscape */
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                max-width: 700px;
+            }
+
+            .stats {
+                gap: 10px;
+            }
+
+            .stat-item {
+                padding: 12px 18px;
+            }
+        }
+
+        /* Touch device improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .btn {
+                min-height: 44px;
+            }
+
+            .btn-small {
+                min-height: 38px;
+            }
+
+            .upload-area {
+                min-height: 150px;
+            }
+
+            .checkbox-label input[type="checkbox"] {
+                width: 24px;
+                height: 24px;
+            }
+
+            .input-row input {
+                min-height: 44px;
+            }
+        }
+
+        /* Editor section main (same as make_html) */
+        .editor-section-main {
+            display: none;
+        }
+
+        .tabs-main {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-main {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab-main:hover {
+            color: #0d6efd;
+        }
+
+        .tab-main.active {
+            color: #0d6efd;
+            border-bottom-color: #0d6efd;
+        }
+
+        .editor-textarea-main {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .editor-textarea-main:focus {
+            outline: none;
+            border-color: #0d6efd;
+            background: var(--bg-card);
+        }
+
+        .preview-content-main {
+            background: #f8f9fa;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .preview-content-main table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .preview-content-main th, .preview-content-main td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .preview-content-main th {
+            background: #e9ecef;
+            font-weight: 600;
+        }
+
+        .preview-content-main tr:hover {
+            background: #f1f3f5;
+        }
+
+        .item-count-main {
+            text-align: right;
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-buttons">
+        <button class="install-btn" id="installBtn" onclick="showInstallHelp()">📲 Install</button>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="container">
+        <h1>Medicine List Processor</h1>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <a href="/make-html" style="display: inline-block; padding: 10px 20px; background: linear-gradient(135deg, #198754, #146c43); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Make HTML File &rarr;</a>
+        </div>
+        <div class="file-counter" id="fileCounter">Files processed: 0 / 3</div>
+
+        <!-- Results will be added here dynamically -->
+        <div id="resultsContainer"></div>
+
+        <!-- Upload Section -->
+        <div class="upload-section show" id="uploadSection">
+            <div class="card">
+                <input type="file" id="fileInput" accept=".htm,.html,.txt" style="display: none;">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">
+                        <strong>Click to upload</strong> or drag and drop<br>
+                        HTM, HTML or TXT files
+                    </div>
+                </div>
+                <div id="fileName" class="file-name" style="display: none;"></div>
+
+                <div class="settings-panel" id="settingsPanel" style="display: none;">
+                    <h3 class="section-title">⚙️ Processing Settings</h3>
+                    <div class="input-group">
+                        <label for="decreaseValue">Decrease discount rate by:</label>
+                        <div class="input-row">
+                            <input type="number" id="decreaseValue" value="1" min="0" max="100" step="0.1">
+                            <span class="input-suffix">%</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="separatorValue">End each line with:</label>
+                        <div class="input-row">
+                            <input type="text" id="separatorValue" value="" placeholder="e.g. , or ; or nothing">
+                        </div>
+                        <small class="input-hint">Leave empty for no separator</small>
+                    </div>
+                    <div class="input-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="stockFormat">
+                            <span class="checkmark"></span>
+                            Stock file format
+                        </label>
+                        <small class="input-hint">Check this if uploading stock.htm (different column layout)</small>
+                    </div>
+                    <button class="btn btn-primary" id="processBtn">🚀 Process File</button>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing file...</p>
+                </div>
+
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+        </div>
+
+        <!-- New Editor Section - shows only when no results -->
+        <div class="new-editor-section" id="newEditorSection">
+            <div class="card">
+                <div class="new-editor-content">
+                    <span class="or-text">or start with empty editor</span>
+                    <button class="btn btn-new" onclick="openNewEditorMain()">✏️ Open New Editor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.getElementById('themeToggle').textContent = '☀️';
+            }
+        })();
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW registration failed'));
+
+            // Listen for shared files
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data.type === 'shared-file') {
+                    handleFile(event.data.file);
+                }
+            });
+        }
+
+        // Check if opened via share
+        if (window.location.search.includes('shared=true')) {
+            window.history.replaceState({}, '', '/');
+        }
+
+        // PWA Install prompt
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        function showInstallHelp() {
+            if (deferredPrompt) {
+                // Auto install available
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            } else {
+                // Show manual instructions
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const isAndroid = /Android/.test(navigator.userAgent);
+
+                let msg = '';
+                if (isIOS) {
+                    msg = 'To install on iPhone/iPad:\n\n1. Tap the Share button (box with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"';
+                } else if (isAndroid) {
+                    msg = 'To install on Android:\n\n1. Tap the menu (3 dots) in browser\n2. Tap "Add to Home Screen" or "Install App"\n3. Tap "Add"';
+                } else {
+                    msg = 'To install:\n\n1. Open browser menu\n2. Look for "Install App" or "Add to Home Screen"';
+                }
+                alert(msg);
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+        });
+
+        // Hide install button if already installed (standalone mode)
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            installBtn.style.display = 'none';
+        }
+
+        let fileCount = 0;
+        const maxFiles = 3;
+        let selectedFile = null;
+        let isTextFile = false;
+
+        const uploadSection = document.getElementById('uploadSection');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const decreaseValue = document.getElementById('decreaseValue');
+        const separatorValue = document.getElementById('separatorValue');
+        const stockFormat = document.getElementById('stockFormat');
+        const processBtn = document.getElementById('processBtn');
+        const fileCounter = document.getElementById('fileCounter');
+
+        function updateFileCounter() {
+            fileCounter.textContent = `Files processed: ${fileCount} / ${maxFiles}`;
+        }
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Handle file selection
+        function handleFile(file) {
+            errorMessage.classList.remove('show');
+            selectedFile = file;
+            isTextFile = file.name.toLowerCase().endsWith('.txt');
+
+            fileName.textContent = `Selected: ${file.name}`;
+            fileName.style.display = 'inline-block';
+
+            if (isTextFile) {
+                // For text files, process directly without settings
+                processTextFile();
+            } else {
+                // For HTM/HTML files, show settings panel
+                settingsPanel.style.display = 'block';
+            }
+        }
+
+        // Process text file directly
+        async function processTextFile() {
+            loading.classList.add('show');
+
+            try {
+                const text = await selectedFile.text();
+                const lines = text.trim().split('\n').filter(line => line.trim());
+
+                loading.classList.remove('show');
+
+                addResultCard({
+                    filename: selectedFile.name,
+                    count: lines.length,
+                    text_output: text,
+                    decrease_value: 'N/A',
+                    isTextFile: true
+                });
+
+                resetUploadSection();
+
+            } catch (error) {
+                loading.classList.remove('show');
+                errorMessage.textContent = 'Error reading text file.';
+                errorMessage.classList.add('show');
+            }
+        }
+
+        // Process HTM/HTML file with user settings
+        async function processFile() {
+            if (!selectedFile) {
+                errorMessage.textContent = 'Please select a file first.';
+                errorMessage.classList.add('show');
+                return;
+            }
+
+            settingsPanel.style.display = 'none';
+            loading.classList.add('show');
+            errorMessage.classList.remove('show');
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('decrease_value', decreaseValue.value);
+            formData.append('separator', separatorValue.value);
+            formData.append('stock_format', stockFormat.checked);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                loading.classList.remove('show');
+
+                if (data.error) {
+                    errorMessage.textContent = data.error;
+                    errorMessage.classList.add('show');
+                    settingsPanel.style.display = 'block';
+                    return;
+                }
+
+                addResultCard(data);
+                resetUploadSection();
+
+            } catch (error) {
+                loading.classList.remove('show');
+                errorMessage.textContent = 'Error processing file. Please try again.';
+                errorMessage.classList.add('show');
+                settingsPanel.style.display = 'block';
+            }
+        }
+
+        processBtn.addEventListener('click', processFile);
+
+        function addResultCard(data) {
+            fileCount++;
+            updateFileCounter();
+
+            const cardId = `result-${fileCount}`;
+            const cardHtml = `
+                <div class="card result-card" id="${cardId}">
+                    <div class="result-header">
+                        <div class="result-title">
+                            📁 ${data.filename}
+                            <span class="file-badge">${data.isTextFile ? 'Text File' : 'Processed'}</span>
+                        </div>
+                        <button class="btn btn-close btn-small" onclick="closeResultCard(${fileCount})">✕ Close</button>
+                    </div>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-number">${data.count}</div>
+                            <div class="stat-label">Items</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${data.decrease_value}${data.isTextFile ? '' : '%'}</div>
+                            <div class="stat-label">Decreased</div>
+                        </div>
+                    </div>
+                    <h3 class="section-title">📝 Output <span class="edit-hint">(editable)</span></h3>
+                    <div id="editor-container-${fileCount}">
+                        <textarea class="markdown-box" id="markdown-${fileCount}">${data.text_output}</textarea>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableDeleteButtons-${fileCount}" onchange="toggleDeleteButtonsMain(${fileCount})">
+                                <label for="enableDeleteButtons-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row deletion</label>
+                            </div>
+                            <button class="btn btn-small" onclick="refreshPreview(${fileCount})" style="padding: 4px 8px; font-size: 11px;">🔄 Refresh Preview</button>
+                        </div>
+                    </div>
+
+                    <!-- Tabbed interface for editor/preview (same as make_html) -->
+                    <div class="editor-section-main" id="tab-interface-${fileCount}" style="display: none;">
+                        <div class="tabs-main">
+                            <button class="tab-main" id="tabEdit-${fileCount}" onclick="showTabMain('${fileCount}', 'edit')">Edit</button>
+                            <button class="tab-main active" id="tabPreview-${fileCount}" onclick="showTabMain('${fileCount}', 'preview')">Preview</button>
+                        </div>
+
+                        <textarea class="editor-textarea-main" id="editorTextarea-${fileCount}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;">${data.text_output}</textarea>
+
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
+                            <input type="checkbox" id="enableDeleteButtonsTab-${fileCount}" onchange="toggleDeleteButtonsTab(${fileCount})">
+                            <label for="enableDeleteButtonsTab-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                        </div>
+
+                        <div class="preview-content-main" id="previewContent-${fileCount}" style="display: block;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Item Name</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTableBody-${fileCount}"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="item-count-main" id="itemCount-${fileCount}">0 items</div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-copy btn-small" onclick="copyToClipboard(${fileCount}, this)">
+                            📋 Copy
+                        </button>
+                        <button class="btn btn-sort btn-small" onclick="sortAlphabetically(${fileCount})">
+                            🔤 Sort A-Z
+                        </button>
+                        <button class="btn btn-download btn-small" onclick="downloadFile(${fileCount}, '${data.filename}')">
+                            ⬇️ Download
+                        </button>
+                        <button class="btn btn-new btn-small" onclick="openNewEditor(${fileCount})">
+                            ✏️ New Editor
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="saveStateBeforeNavigateToMakeHTML(${fileCount})">
+                            📄 Make HTML File
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="combineAndMakeHTML(${fileCount})">
+                            🔄 Combine & HTML
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            resultsContainer.insertAdjacentHTML('beforeend', cardHtml);
+            hideNewEditorSection();
+
+            // Check if max files reached
+            if (fileCount >= maxFiles) {
+                uploadSection.classList.remove('show');
+                const maxMsg = document.createElement('div');
+                maxMsg.className = 'max-reached';
+                maxMsg.innerHTML = '⚠️ Maximum 3 files reached. Refresh page to start over.';
+                resultsContainer.insertAdjacentHTML('beforeend', '<div class="max-reached">⚠️ Maximum 3 files reached. Refresh page to start over.</div>');
+            }
+        }
+
+        function resetUploadSection() {
+            fileInput.value = '';
+            fileName.style.display = 'none';
+            settingsPanel.style.display = 'none';
+            selectedFile = null;
+            isTextFile = false;
+            decreaseValue.value = 1;
+            separatorValue.value = '';
+            stockFormat.checked = false;
+        }
+
+        let editorCount = 0;
+
+        function hideNewEditorSection() {
+            document.getElementById('newEditorSection').classList.add('hidden');
+        }
+
+        function openNewEditorMain() {
+            editorCount++;
+            const editorId = `editor-${editorCount}`;
+
+            const editorHtml = `
+                <div class="card result-card editor-card" id="${editorId}">
+                    <div class="result-header">
+                        <div class="result-title">
+                            ✏️ New Editor ${editorCount}
+                            <span class="file-badge editor-badge">Editable</span>
+                        </div>
+                        <button class="btn btn-close btn-small" onclick="closeEditor('${editorId}')">✕ Close</button>
+                    </div>
+                    <div class="filename-input">
+                        <label>Filename:</label>
+                        <input type="text" id="filename-${editorId}" value="my_list" placeholder="Enter filename">
+                        <span class="input-suffix">.txt</span>
+                    </div>
+                    <h3 class="section-title">📝 Paste or type here <span class="edit-hint">(editable)</span></h3>
+                    <div id="editor-container-${editorId}">
+                        <textarea class="markdown-box" id="markdown-${editorId}" placeholder="Paste your content here..."></textarea>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableDeleteButtons-${editorId}" onchange="toggleDeleteButtonsMain('${editorId}')">
+                                <label for="enableDeleteButtons-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion</label>
+                            </div>
+                            <button class="btn btn-small" onclick="refreshPreview('${editorId}')" style="padding: 4px 8px; font-size: 11px;">🔄 Refresh Preview</button>
+                        </div>
+                    </div>
+
+                    <!-- Tabbed interface for editor/preview (same as make_html) -->
+                    <div class="editor-section-main" id="tab-interface-${editorId}" style="display: none;">
+                        <div class="tabs-main">
+                            <button class="tab-main" id="tabEdit-${editorId}" onclick="showTabMain('${editorId}', 'edit')">Edit</button>
+                            <button class="tab-main active" id="tabPreview-${editorId}" onclick="showTabMain('${editorId}', 'preview')">Preview</button>
+                        </div>
+
+                        <textarea class="editor-textarea-main" id="editorTextarea-${editorId}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;"></textarea>
+
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
+                            <input type="checkbox" id="enableDeleteButtonsTab-${editorId}" onchange="toggleDeleteButtonsTab(${editorId})">
+                            <label for="enableDeleteButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                        </div>
+
+                        <div class="preview-content-main" id="previewContent-${editorId}" style="display: block;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Item Name</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTableBody-${editorId}"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="item-count-main" id="itemCount-${editorId}">0 items</div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-copy btn-small" onclick="copyEditorContent('${editorId}', this)">
+                            📋 Copy
+                        </button>
+                        <button class="btn btn-sort btn-small" onclick="sortEditorAlphabetically('${editorId}')">
+                            🔤 Sort A-Z
+                        </button>
+                        <button class="btn btn-download btn-small" onclick="downloadEditorContent('${editorId}')">
+                            ⬇️ Download
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="redirectToMakeHTMLEditor('${editorId}')">
+                            📄 Make HTML File
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="redirectToMakeHTMLEditor('${editorId}', true)">
+                            🔄 Combine & HTML
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            resultsContainer.insertAdjacentHTML('beforeend', editorHtml);
+            document.getElementById(`markdown-${editorId}`).focus();
+            hideNewEditorSection();
+        }
+
+        function openNewEditor(afterIndex) {
+            editorCount++;
+            const editorId = `editor-${editorCount}`;
+
+            const editorHtml = `
+                <div class="card result-card editor-card" id="${editorId}">
+                    <div class="result-header">
+                        <div class="result-title">
+                            ✏️ New Editor ${editorCount}
+                            <span class="file-badge editor-badge">Editable</span>
+                        </div>
+                        <button class="btn btn-close btn-small" onclick="closeEditor('${editorId}')">✕ Close</button>
+                    </div>
+                    <div class="filename-input">
+                        <label>Filename:</label>
+                        <input type="text" id="filename-${editorId}" value="combined_list" placeholder="Enter filename">
+                        <span class="input-suffix">.txt</span>
+                    </div>
+                    <h3 class="section-title">📝 Paste or type here <span class="edit-hint">(editable)</span></h3>
+                    <div id="editor-container-${editorId}">
+                        <textarea class="markdown-box" id="markdown-${editorId}" placeholder="Paste your copied content here..."></textarea>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableDeleteButtons-${editorId}" onchange="toggleDeleteButtonsMain('${editorId}')">
+                                <label for="enableDeleteButtons-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion</label>
+                            </div>
+                            <button class="btn btn-small" onclick="refreshPreview('${editorId}')" style="padding: 4px 8px; font-size: 11px;">🔄 Refresh Preview</button>
+                        </div>
+                    </div>
+
+                    <!-- Tabbed interface for editor/preview (same as make_html) -->
+                    <div class="editor-section-main" id="tab-interface-${editorId}" style="display: none;">
+                        <div class="tabs-main">
+                            <button class="tab-main" id="tabEdit-${editorId}" onclick="showTabMain('${editorId}', 'edit')">Edit</button>
+                            <button class="tab-main active" id="tabPreview-${editorId}" onclick="showTabMain('${editorId}', 'preview')">Preview</button>
+                        </div>
+
+                        <textarea class="editor-textarea-main" id="editorTextarea-${editorId}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;"></textarea>
+
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
+                            <input type="checkbox" id="enableDeleteButtonsTab-${editorId}" onchange="toggleDeleteButtonsTab(${editorId})">
+                            <label for="enableDeleteButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                        </div>
+
+                        <div class="preview-content-main" id="previewContent-${editorId}" style="display: block;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Item Name</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTableBody-${editorId}"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="item-count-main" id="itemCount-${editorId}">0 items</div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-copy btn-small" onclick="copyEditorContent('${editorId}', this)">
+                            📋 Copy
+                        </button>
+                        <button class="btn btn-sort btn-small" onclick="sortEditorAlphabetically('${editorId}')">
+                            🔤 Sort A-Z
+                        </button>
+                        <button class="btn btn-download btn-small" onclick="downloadEditorContent('${editorId}')">
+                            ⬇️ Download
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="redirectToMakeHTMLEditor('${editorId}')">
+                            📄 Make HTML File
+                        </button>
+                        <button class="btn btn-primary btn-small" onclick="redirectToMakeHTMLEditor('${editorId}', true)">
+                            🔄 Combine & HTML
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Insert after the card that triggered it
+            const triggerCard = document.getElementById(`result-${afterIndex}`);
+            triggerCard.insertAdjacentHTML('afterend', editorHtml);
+
+            // Focus the new textarea
+            document.getElementById(`markdown-${editorId}`).focus();
+        }
+
+        function closeEditor(editorId) {
+            const editor = document.getElementById(editorId);
+            if (editor) {
+                editor.remove();
+            }
+        }
+
+        function closeResultCard(index) {
+            const card = document.getElementById(`result-${index}`);
+            if (card) {
+                card.remove();
+                fileCount--;
+                updateFileCounter();
+
+                // Show upload section again if it was hidden
+                if (fileCount < maxFiles) {
+                    uploadSection.classList.add('show');
+                    // Remove max reached message if exists
+                    const maxMsg = document.querySelector('.max-reached');
+                    if (maxMsg) maxMsg.remove();
+                }
+            }
+        }
+
+        function copyEditorContent(editorId, btn) {
+            const textarea = document.getElementById(`markdown-${editorId}`);
+            const content = textarea.value;
+
+            copyText(content, btn);
+        }
+
+        function downloadEditorContent(editorId) {
+            const textarea = document.getElementById(`markdown-${editorId}`);
+            const filenameInput = document.getElementById(`filename-${editorId}`);
+            const content = textarea.value;
+            const filename = filenameInput.value.trim() || 'combined_list';
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function redirectToMakeHTMLEditor(editorId, combineMode = false) {
+            const textarea = document.getElementById(`markdown-${editorId}`);
+            const content = textarea.value;
+
+            if (combineMode) {
+                // If in combine mode, show the combine modal
+                showCombineModal(content);
+            } else {
+                // Store the content in localStorage to pass to the Make HTML page
+                localStorage.setItem('transferredContent', content);
+
+                // Redirect to the Make HTML page
+                window.location.href = '/make-html';
+            }
+        }
+
+        function combineAndMakeHTML(index) {
+            const textarea = document.getElementById(`markdown-${index}`);
+            const content = textarea.value;
+
+            // Show the combine modal with the current content
+            showCombineModal(content);
+        }
+
+        function showCombineModal(initialContent = '') {
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                backdrop-filter: blur(5px);
+            `;
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: var(--bg-card);
+                border-radius: 12px;
+                padding: 25px;
+                width: 90%;
+                max-width: 700px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                border: 1px solid var(--border-color);
+            `;
+
+            // Get all available text content from result cards and editors
+            const availableContents = [];
+            const resultCards = document.querySelectorAll('.result-card:not(.editor-card)');
+            resultCards.forEach((card, idx) => {
+                const textarea = card.querySelector('textarea');
+                if (textarea) {
+                    const filename = card.querySelector('.result-title').textContent.trim();
+                    availableContents.push({
+                        id: `result-${idx + 1}`,
+                        name: filename,
+                        content: textarea.value
+                    });
+                }
+            });
+
+            const editorCards = document.querySelectorAll('.result-card.editor-card');
+            editorCards.forEach((card, idx) => {
+                const textarea = card.querySelector('textarea');
+                if (textarea) {
+                    const filename = card.querySelector('.result-title').textContent.trim();
+                    availableContents.push({
+                        id: card.id,
+                        name: filename,
+                        content: textarea.value
+                    });
+                }
+            });
+
+            // Build modal HTML
+            let checkboxesHtml = '';
+            availableContents.forEach(item => {
+                const isChecked = item.content === initialContent ? 'checked' : '';
+                checkboxesHtml += `
+                    <div style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg);">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" class="select-content" value="${item.id}" ${isChecked} style="margin-right: 10px; transform: scale(1.2);">
+                            <span style="flex-grow: 1; font-weight: 500; color: var(--text-primary);">${item.name}</span>
+                            <span style="color: #666; font-size: 12px;">(${item.content.split('\n').filter(l => l.trim()).length} lines)</span>
+                        </label>
+                    </div>
+                `;
+            });
+
+            if (availableContents.length === 0) {
+                modal.innerHTML = `
+                    <h3 style="color: var(--text-primary); margin-bottom: 20px;">🔄 Combine Files to HTML</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">No content available to combine. Please process files or create editors first.</p>
+                    <div style="text-align: right;">
+                        <button class="btn btn-close" onclick="closeCombineModal()" style="padding: 8px 16px;">Close</button>
+                    </div>
+                `;
+            } else {
+                modal.innerHTML = `
+                    <h3 style="color: var(--text-primary); margin-bottom: 20px;">🔄 Combine Files to HTML</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">Select which files/content to combine:</p>
+
+                    <div id="contentSelection">
+                        ${checkboxesHtml}
+                    </div>
+
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button class="btn btn-close" onclick="closeCombineModal()" style="padding: 8px 16px; margin-right: 10px;">Cancel</button>
+                        <button class="btn btn-primary" onclick="processCombinedContent()" style="padding: 8px 16px;">Combine & Make HTML</button>
+                    </div>
+                `;
+            }
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function processCombinedContent() {
+            const selectedCheckboxes = document.querySelectorAll('.select-content:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select at least one file to combine.');
+                return;
+            }
+
+            let combinedContent = '';
+            const availableContents = [];
+
+            // Get all available text content from result cards and editors
+            const resultCards = document.querySelectorAll('.result-card:not(.editor-card)');
+            resultCards.forEach((card, idx) => {
+                const textarea = card.querySelector('textarea');
+                if (textarea) {
+                    availableContents.push({
+                        id: `result-${idx + 1}`,
+                        content: textarea.value
+                    });
+                }
+            });
+
+            const editorCards = document.querySelectorAll('.result-card.editor-card');
+            editorCards.forEach((card, idx) => {
+                const textarea = card.querySelector('textarea');
+                if (textarea) {
+                    availableContents.push({
+                        id: card.id,
+                        content: textarea.value
+                    });
+                }
+            });
+
+            // Combine selected content
+            selectedCheckboxes.forEach(checkbox => {
+                const selectedId = checkbox.value;
+                const selectedContent = availableContents.find(item => item.id === selectedId);
+                if (selectedContent) {
+                    if (combinedContent) {
+                        combinedContent += '\n'; // Add a newline between different content sources
+                    }
+                    combinedContent += selectedContent.content;
+                }
+            });
+
+            // Store the combined content in localStorage to pass to the Make HTML page
+            localStorage.setItem('transferredContent', combinedContent);
+
+            // Remove the modal
+            document.querySelector('[style*="position: fixed"]').remove();
+
+            // Redirect to the Make HTML page
+            window.location.href = '/make-html';
+        }
+
+        function closeCombineModal() {
+            // Find and remove the modal overlay
+            const overlay = document.querySelector('[style*="position: fixed"]');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+
+        function copyText(content, btn) {
+            // Use textarea method for better compatibility
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = content;
+            tempTextarea.style.position = 'fixed';
+            tempTextarea.style.left = '-9999px';
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+
+            try {
+                document.execCommand('copy');
+                // Show feedback
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✓ Copied!';
+                btn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                }, 1500);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+
+            document.body.removeChild(tempTextarea);
+        }
+
+        function copyToClipboard(index, btn) {
+            const textarea = document.getElementById(`markdown-${index}`);
+            const content = textarea.value;
+            copyText(content, btn);
+        }
+
+        function sortAlphabetically(index) {
+            const textarea = document.getElementById(`markdown-${index}`);
+            sortTextarea(textarea);
+        }
+
+        function sortEditorAlphabetically(editorId) {
+            const textarea = document.getElementById(`markdown-${editorId}`);
+            sortTextarea(textarea);
+        }
+
+        function sortTextarea(textarea) {
+            const content = textarea.value;
+            const lines = content.split('\n').filter(line => line.trim());
+            lines.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+            textarea.value = lines.join('\n');
+        }
+
+        function downloadFile(index, originalFilename) {
+            const textarea = document.getElementById(`markdown-${index}`);
+            const content = textarea.value;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Generate download filename
+            const baseName = originalFilename.replace(/\.[^/.]+$/, '');
+            a.download = `${baseName}_output.txt`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function redirectToMakeHTML(index) {
+            const textarea = document.getElementById(`markdown-${index}`);
+            const content = textarea.value;
+
+            // Store the content in localStorage to pass to the Make HTML page
+            localStorage.setItem('transferredContent', content);
+
+            // Redirect to the Make HTML page
+            window.location.href = '/make-html';
+        }
+
+        // Save all content to session storage periodically
+        function saveAllContentToSession() {
+            // Create an object to store all the content from result cards
+            const allContent = [];
+
+            // Get all result cards and save their content
+            const resultCards = document.querySelectorAll('.result-card:not(.editor-card)');
+            resultCards.forEach(card => {
+                const textarea = card.querySelector('textarea');
+                if (textarea && textarea.value.trim()) {
+                    const fileId = textarea.id.replace('markdown-', '');
+                    allContent.push({
+                        id: fileId,
+                        content: textarea.value,
+                        timestamp: Date.now()
+                    });
+                }
+            });
+
+            // Store all content with timestamp
+            if (allContent.length > 0) {
+                const sessionData = {
+                    content: allContent,
+                    timestamp: Date.now(),
+                    fileCount: fileCount
+                };
+                sessionStorage.setItem('mainPageSession', JSON.stringify(sessionData));
+            }
+        }
+
+        // Load content from session storage
+        function loadAllContentFromSession() {
+            const sessionDataJSON = sessionStorage.getItem('mainPageSession');
+            if (sessionDataJSON) {
+                try {
+                    const sessionData = JSON.parse(sessionDataJSON);
+                    const currentTime = Date.now();
+                    const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
+
+                    // Check if the session data is still valid (less than 20 minutes old)
+                    if (currentTime - sessionData.timestamp < twentyMinutes) {
+                        // Restore the file count
+                        fileCount = sessionData.fileCount || 0;
+                        updateFileCounter();
+
+                        // Show results container if there was content
+                        if (sessionData.content.length > 0) {
+                            // Clear existing content and rebuild from session data
+                            document.getElementById('resultsContainer').innerHTML = '';
+
+                            // Process each saved item and recreate the result cards
+                            sessionData.content.forEach(item => {
+                                // Calculate count based on number of lines
+                                const lineCount = item.content.split('\n').filter(line => line.trim()).length;
+
+                                // Create the result card HTML
+                                const cardId = `result-${item.id}`;
+                                const cardHtml = `
+                                    <div class="card result-card" id="${cardId}">
+                                        <div class="result-header">
+                                            <div class="result-title">
+                                                📁 Session-${item.id}.txt
+                                                <span class="file-badge">Session</span>
+                                            </div>
+                                            <button class="btn btn-close btn-small" onclick="closeResultCard(${item.id})">✕ Close</button>
+                                        </div>
+                                        <div class="stats">
+                                            <div class="stat-item">
+                                                <div class="stat-number">${lineCount}</div>
+                                                <div class="stat-label">Items</div>
+                                            </div>
+                                            <div class="stat-item">
+                                                <div class="stat-number">N/A</div>
+                                                <div class="stat-label">Decreased</div>
+                                            </div>
+                                        </div>
+                                        <h3 class="section-title">📝 Output <span class="edit-hint">(editable)</span></h3>
+                                        <textarea class="markdown-box" id="markdown-${item.id}">${item.content}</textarea>
+                                        <div class="actions">
+                                            <button class="btn btn-copy btn-small" onclick="copyToClipboard(${item.id}, this)">
+                                                📋 Copy
+                                            </button>
+                                            <button class="btn btn-sort btn-small" onclick="sortAlphabetically(${item.id})">
+                                                🔤 Sort A-Z
+                                            </button>
+                                            <button class="btn btn-download btn-small" onclick="downloadFile(${item.id}, 'Session-${item.id}.txt')">
+                                                ⬇️ Download
+                                            </button>
+                                            <button class="btn btn-new btn-small" onclick="openNewEditor(${item.id})">
+                                                ✏️ New Editor
+                                            </button>
+                                            <button class="btn btn-primary btn-small" onclick="redirectToMakeHTML(${item.id})">
+                                                📄 Make HTML File
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                                document.getElementById('resultsContainer').insertAdjacentHTML('beforeend', cardHtml);
+                            });
+
+                            // Hide new editor section since we have content
+                            const newEditorSection = document.getElementById('newEditorSection');
+                            if (newEditorSection) {
+                                newEditorSection.classList.add('hidden');
+                            }
+
+                            // Update file counter
+                            updateFileCounter();
+
+                            // Show upload section if not at max files
+                            if (fileCount < maxFiles) {
+                                document.getElementById('uploadSection').classList.add('show');
+                            } else {
+                                document.getElementById('uploadSection').classList.remove('show');
+                                const maxMsg = document.createElement('div');
+                                maxMsg.className = 'max-reached';
+                                maxMsg.innerHTML = '⚠️ Maximum 3 files reached. Refresh page to start over.';
+                                document.getElementById('resultsContainer').insertAdjacentHTML('beforeend', '<div class="max-reached">⚠️ Maximum 3 files reached. Refresh page to start over.</div>');
+                            }
+                        }
+                    } else {
+                        // Session expired, remove the old data
+                        sessionStorage.removeItem('mainPageSession');
+                    }
+                } catch (e) {
+                    console.error('Error parsing main page session data:', e);
+                    sessionStorage.removeItem('mainPageSession');
+                }
+            }
+        }
+
+        // Check if page was refreshed by checking session storage for a reload flag
+        window.addEventListener('load', function() {
+            const pageReloaded = sessionStorage.getItem('mainPageReloaded');
+            if (!pageReloaded) {
+                // This is not a refresh, so load existing session data
+                loadAllContentFromSession();
+            } else {
+                // This is a refresh, so clear the session data and remove the flag
+                sessionStorage.removeItem('mainPageSession');
+                sessionStorage.removeItem('mainPageReloaded');
+            }
+        });
+
+        // Set flag before page unloads to detect if it's a refresh/navigation
+        window.addEventListener('beforeunload', function() {
+            sessionStorage.setItem('mainPageReloaded', 'true');
+        });
+
+        // Save content when user makes changes in any textarea
+        document.addEventListener('DOMContentLoaded', function() {
+            // Save content when user stops typing in any markdown textarea
+            document.addEventListener('input', function(e) {
+                if (e.target && e.target.classList.contains('markdown-box')) {
+                    clearTimeout(window.markdownSaveTimeout);
+                    window.markdownSaveTimeout = setTimeout(saveAllContentToSession, 1000); // Save after 1 second of inactivity
+                }
+            });
+
+            // Also save when the window loses focus
+            window.addEventListener('blur', saveAllContentToSession);
+
+            // Save when user navigates away from the page
+            window.addEventListener('beforeunload', saveAllContentToSession);
+        });
+
+        // Save state when navigating to Make HTML page
+        function saveStateBeforeNavigateToMakeHTML(index) {
+            saveAllContentToSession();
+            redirectToMakeHTML(index);
+        }
+
+        // Toggle delete buttons for main page - show tabbed interface
+        function toggleDeleteButtonsMain(id) {
+            const checkbox = document.getElementById(`enableDeleteButtons-${id}`);
+            const editorContainer = document.getElementById(`editor-container-${id}`);
+            const tabInterface = document.getElementById(`tab-interface-${id}`);
+
+            // Get the original content from the original textarea
+            const originalTextarea = document.getElementById(`markdown-${id}`);
+            let originalContent = '';
+            if (originalTextarea) {
+                originalContent = originalTextarea.value;
+            }
+
+            if (checkbox.checked) {
+                // Show tabbed interface
+                if (editorContainer) editorContainer.style.display = 'none';
+                if (tabInterface) {
+                    tabInterface.style.display = 'block';
+
+                    // Initialize the editor textarea with content
+                    const editorTextarea = document.getElementById(`editorTextarea-${id}`);
+                    if (editorTextarea) {
+                        editorTextarea.value = originalContent;
+
+                        // Setup input listener for this specific editor
+                        setupMainPageInputListener(id);
+
+                        // Update item count and preview
+                        updateMainPageItemCount(id);
+
+                        // Update the preview to show the content (without delete buttons initially)
+                        updateMainPagePreview(id);
+
+                        // Make sure preview tab is active by default
+                        const tabEdit = document.getElementById(`tabEdit-${id}`);
+                        const tabPreview = document.getElementById(`tabPreview-${id}`);
+                        const preview = document.getElementById(`previewContent-${id}`);
+
+                        if (tabEdit && tabPreview) {
+                            tabEdit.classList.remove('active');
+                            tabPreview.classList.add('active');
+                        }
+
+                        if (editorTextarea && preview) {
+                            editorTextarea.style.display = 'none';
+                            preview.style.display = 'block';
+                        }
+                    }
+                }
+            } else {
+                // Hide tabbed interface and show original editor
+                if (editorContainer) editorContainer.style.display = 'block';
+                if (tabInterface) tabInterface.style.display = 'none';
+
+                // Sync content back to original textarea if needed
+                const editorTextarea = document.getElementById(`editorTextarea-${id}`);
+                if (editorTextarea && originalTextarea) {
+                    originalTextarea.value = editorTextarea.value;
+                }
+            }
+        }
+
+        // Show tab for main page
+        function showTabMain(id, tab) {
+            const tabEdit = document.getElementById(`tabEdit-${id}`);
+            const tabPreview = document.getElementById(`tabPreview-${id}`);
+            const textarea = document.getElementById(`editorTextarea-${id}`);
+            const preview = document.getElementById(`previewContent-${id}`);
+
+            if (tab === 'edit') {
+                tabEdit.classList.add('active');
+                tabPreview.classList.remove('active');
+                if (textarea) textarea.style.display = 'block';
+                if (preview) preview.style.display = 'none';
+            } else {
+                tabEdit.classList.remove('active');
+                tabPreview.classList.add('active');
+                if (textarea) textarea.style.display = 'none';
+                if (preview) preview.style.display = 'block';
+                updateMainPagePreview(id);
+            }
+        }
+
+        // Parse items for main page (same as make_html)
+        function parseMainPageItems(text, id) {
+            const items = [];
+            const lines = text.split('\n');
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                if (line.includes('→')) line = line.split('→')[1];
+                if (line.includes('-----')) {
+                    const parts = line.split('-----');
+                    const name = parts[0].trim();
+                    let value = parts[1] ? parts[1].trim() : '';
+                    // Remove trailing comma if present
+                    value = value.replace(/,$/, '');
+                    items.push({ name, value });
+                }
+            }
+            // Sort alphabetically by name
+            items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
+            return items;
+        }
+
+        // Update preview for main page (same as make_html)
+        function updateMainPagePreview(id) {
+            const editorTextarea = document.getElementById(`editorTextarea-${id}`);
+            if (!editorTextarea) return;
+
+            const items = parseMainPageItems(editorTextarea.value, id);
+            const tbody = document.getElementById(`previewTableBody-${id}`);
+
+            // Check if delete buttons are currently enabled
+            const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
+            const deleteButtonsEnabled = deleteCheckbox && deleteCheckbox.checked;
+
+            let html = '';
+            let currentLetter = '';
+
+            items.forEach((item, i) => {
+                const firstLetter = item.name.charAt(0).toUpperCase();
+                if (firstLetter !== currentLetter) {
+                    currentLetter = firstLetter;
+                    html += `<tr style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white;">
+                        <td colspan="${deleteButtonsEnabled ? 4 : 3}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
+                    </tr>`;
+                }
+
+                if (deleteButtonsEnabled) {
+                    html += `<tr>
+                        <td style="width: 40px; padding: 5px; text-align: center;">
+                            <button class="delete-btn" onclick="deleteRowMainPage('${id}', this.closest('tr'))"
+                                style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
+                                title="Delete this row">✕</button>
+                        </td>
+                        <td>${i + 1}</td>
+                        <td>${item.name}</td>
+                        <td>${item.value}</td>
+                    </tr>`;
+                } else {
+                    html += `<tr>
+                        <td>${i + 1}</td>
+                        <td>${item.name}</td>
+                        <td>${item.value}</td>
+                    </tr>`;
+                }
+            });
+
+            if (tbody) {
+                tbody.innerHTML = html;
+            }
+        }
+
+        // Update item count for main page
+        function updateMainPageItemCount(id) {
+            const editorTextarea = document.getElementById(`editorTextarea-${id}`);
+            if (!editorTextarea) return;
+
+            const items = parseMainPageItems(editorTextarea.value, id);
+            const itemCountElement = document.getElementById(`itemCount-${id}`);
+            if (itemCountElement) {
+                itemCountElement.textContent = `${items.length} items`;
+            }
+        }
+
+        // Toggle delete buttons for main page preview - show X buttons when checkbox is checked
+        function toggleDeleteButtonsTab(id) {
+            // Update the preview to show or hide delete buttons based on checkbox state
+            updateMainPagePreview(id);
+        }
+
+        // Delete a row from main page preview (same concept as make_html)
+        function deleteRowMainPage(id, row) {
+            // Get the item details from the row
+            const cells = row.querySelectorAll('td');
+
+            // Determine if delete buttons are enabled based on number of cells
+            const hasDeleteButton = cells.length >= 4; // With delete button, we have 4 cells (delete, #, name, value)
+
+            if (hasDeleteButton && cells.length >= 4) {
+                // With delete buttons enabled, the cells are: [delete, #, name, value]
+                const itemName = cells[2].textContent.trim();
+                const itemValue = cells[3].textContent.trim();
+
+                removeLineFromMainPageTextarea(id, itemName, itemValue);
+            } else if (!hasDeleteButton && cells.length >= 3) {
+                // Without delete buttons, the cells are: [#, name, value]
+                const itemName = cells[1].textContent.trim();
+                const itemValue = cells[2].textContent.trim();
+
+                removeLineFromMainPageTextarea(id, itemName, itemValue);
+            }
+        }
+
+        // Helper function to remove a line from main page textarea
+        function removeLineFromMainPageTextarea(id, itemName, itemValue) {
+            // Get current text content from textarea
+            const textarea = document.getElementById(`editorTextarea-${id}`);
+            if (!textarea) return;
+
+            let content = textarea.value;
+
+            // Create the line pattern to remove
+            const linePattern = new RegExp(`^.*${escapeRegExp(itemName)}.*-----.*${escapeRegExp(itemValue)}.*$`, 'gm');
+
+            // Remove the matching line(s)
+            content = content.replace(linePattern, '').trim();
+            content = content.replace(/^\s*[\r\n]/gm, ''); // Clean up empty lines
+
+            // Update textarea
+            textarea.value = content;
+
+            // Update item count and preview
+            updateMainPageItemCount(id);
+            updateMainPagePreview(id);
+
+            // Also update the original textarea
+            const originalTextarea = document.getElementById(`markdown-${id}`);
+            if (originalTextarea) {
+                originalTextarea.value = content;
+            }
+        }
+
+        // Setup input listener for main page editor
+        function setupMainPageInputListener(id) {
+            const editorTextarea = document.getElementById(`editorTextarea-${id}`);
+            if (editorTextarea) {
+                // Remove any existing listeners to avoid duplicates
+                const newEditor = editorTextarea.cloneNode(true);
+                editorTextarea.parentNode.replaceChild(newEditor, editorTextarea);
+
+                const clonedEditor = document.getElementById(`editorTextarea-${id}`);
+                if (clonedEditor) {
+                    clonedEditor.addEventListener('input', function() {
+                        updateMainPageItemCount(id);
+                    });
+                }
+            }
+        }
+
+        // Refresh preview tab
+        function refreshPreview(id) {
+            const checkbox = document.getElementById(`enableDeleteButtons-${id}`);
+            if (checkbox && checkbox.checked) {
+                const tabPreview = document.getElementById(`tabPreview-${id}`);
+                if (tabPreview && tabPreview.classList.contains('active')) {
+                    updateMainPagePreview(id); // If on preview tab, update preview
+                } else {
+                    updateMainPageItemCount(id); // If on edit tab, just update count
+                }
+            } else {
+                // If not in tab view, update the original preview if it exists
+                const textarea = document.getElementById(`markdown-${id}`);
+                if (textarea) {
+                    const lines = textarea.value.split('\n').filter(line => line.trim() !== '');
+                    let previewHtml = '';
+                    lines.forEach((line, index) => {
+                        if (line.trim() !== '') {
+                            previewHtml += `<div style="margin-bottom: 5px; padding: 5px; background: #f1f3f5; border-radius: 4px; word-break: break-word; font-family: monospace; font-size: 13px;">${escapeHtml(line)}</div>`;
+                        }
+                    });
+                    const previewDiv = document.getElementById(`preview-${id}`);
+                    if (previewDiv) {
+                        previewDiv.innerHTML = previewHtml;
+                    }
+                }
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Refresh preview when textarea content changes
+        function setupPreviewRefresh() {
+            // The individual editors have their own listeners now
+            // This is just for the original markdown boxes
+        }
+
+        // Initialize preview refresh when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupPreviewRefresh();
+        });
+    </script>
+</body>
+</html>

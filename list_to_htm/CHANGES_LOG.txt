@@ -1,0 +1,59 @@
+CHANGES LOG - list.HTM
+=======================
+Date: 23/01/2026
+
+1. PDF GENERATE BUTTON FIX
+   - Removed CodePen-specific code (window.CP.shouldStopExecution)
+   - Updated jsPDF library from unpkg to cdnjs (v1.5.3)
+   - Fixed update_htm.py to include createRows function variables
+   - Added error handling to generatePDF function
+
+2. WHATSAPP BUTTON IN PREVIEW
+   - Added "Share on WhatsApp" button in preview window
+   - Uses html2canvas to capture preview as image
+   - Uses Web Share API for mobile (requires HTTPS)
+   - Falls back to download + open WhatsApp on desktop
+   - Note: HTTPS required for image sharing (use Netlify)
+
+3. REMOVED SHUMAIL/DEVELOPER REFERENCES
+   - Removed "DEVELOPED BY SHUMAIL AMIN" from main page
+   - Removed from print preview (Printf)
+   - Removed from preview window (myfun)
+   - Removed from PDF generation
+   - Removed Skype contact
+   - Removed typed.js animation strings about software
+   - Removed YouTube video section
+   - Removed WhatsApp/phone contact details
+
+4. MOBILE VIEW ADJUSTMENTS
+   - Added viewport meta tag: width=680
+   - Body padding: 20px top/bottom, 15px left/right
+   - Invoice-box margin: 10px auto
+   - Reduced table cell padding: 2px
+   - Qty input box: smaller size (55px width, 16px font)
+   - Item rows: 6px padding top/bottom for spacing
+   - Offer/Bonus columns: reduced padding, nowrap
+   - Item name: white-space nowrap (single row)
+
+5. BOTTOM WHITE SPACE
+   - Added 100px white space at bottom of main page
+
+FILES MODIFIED:
+- list.HTM (main file)
+- update_htm.py (added createRows function update)
+
+PENDING:
+- Test WhatsApp image sharing on HTTPS (Netlify)
+
+TOMORROW'S TASK - FULL WORKFLOW:
+================================
+1. Extract data from HTM file (upload)
+2. Update stock file
+3. Merge and edit data
+4. Convert to final HTML file (like list.HTM) with:
+   - Preview functionality
+   - WhatsApp sharing (with image)
+   - PDF generation
+   - Mobile responsive view
+
+This will be integrated into the Flask website (app.py)

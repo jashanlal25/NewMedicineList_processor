@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make HTML File</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --bg-card: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --border-color: #e0e0e0;
+            --input-bg: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: linear-gradient(135deg, #0a0a12 0%, #12121a 50%, #0a1a2e 100%);
+            --bg-card: #1e1e2e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #aaa;
+            --border-color: #333;
+            --input-bg: #2a2a3e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle {
+            position: static;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            margin-left: auto;
+            margin-bottom: 10px;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link {
+            display: inline-block;
+            color: #fff;
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        input[type="text"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #0d6efd;
+        }
+
+        .file-upload {
+            border: 2px dashed #0d6efd;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .file-upload:hover {
+            background: #e9ecef;
+            border-color: #0a58ca;
+        }
+
+        .file-upload.dragover {
+            background: #cfe2ff;
+            border-color: #0a58ca;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .file-upload-text {
+            color: #555;
+            font-size: 16px;
+        }
+
+        /* Editor Section */
+        .editor-section {
+            display: none;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .editor-header h3 {
+            color: #1a1a2e;
+            font-size: 16px;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #6c757d;
+            color: #6c757d;
+        }
+
+        .btn-outline:hover {
+            background: #6c757d;
+            color: white;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            background: #f8f9fa;
+        }
+
+        .editor-textarea:focus {
+            outline: none;
+            border-color: #0d6efd;
+            background: #fff;
+        }
+
+        .item-count {
+            text-align: right;
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0a58ca, #084298);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #198754, #146c43);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #146c43, #0f5132);
+        }
+
+        .result {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            padding: 20px;
+            background: #d1e7dd;
+            border-radius: 8px;
+            color: #0f5132;
+            margin-bottom: 15px;
+        }
+
+        .result-card.error {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .result-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .result-buttons .btn {
+            flex: 1;
+        }
+
+        .format-info {
+            background: #fff3cd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #664d03;
+            font-size: 14px;
+        }
+
+        .format-info code {
+            background: #ffc107;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0d6efd;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .row .form-group {
+            flex: 1;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #0d6efd;
+        }
+
+        .tab.active {
+            color: #0d6efd;
+            border-bottom-color: #0d6efd;
+        }
+
+        .preview-content {
+            display: none;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .preview-content table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .preview-content th, .preview-content td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .preview-content th {
+            background: #e9ecef;
+            font-weight: 600;
+        }
+
+        .preview-content tr:hover {
+            background: #f1f3f5;
+        }
+
+        @media (max-width: 600px) {
+            .row {
+                flex-direction: column;
+            }
+            .result-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <a href="/" class="nav-link" onclick="saveToSessionStorage(); setTimeout(() => window.location.href='/', 100); return false;">&larr; Back to Home</a>
+            <button class="theme-toggle" type="button">🌙</button>
+        </div>
+        <h1>Make HTML File</h1>
+
+        <div class="card">
+            <div class="row">
+                <div class="form-group">
+                    <label for="list_no">List Number</label>
+                    <input type="text" id="list_no" name="list_no" value="000001" placeholder="e.g., 000001">
+                </div>
+                <div class="form-group">
+                    <label for="list_date">List Date</label>
+                    <input type="date" id="list_date" name="list_date">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label for="title">Title / Company Name</label>
+                    <input type="text" id="title" name="title" value="" placeholder="Enter Company Name">
+                </div>
+                <div class="form-group">
+                    <label for="whatsapp_number">WhatsApp Number</label>
+                    <input type="text" id="whatsapp_number" name="whatsapp_number" value="923" placeholder="e.g., 923001234567">
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="form-group" id="uploadSection">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="margin-bottom: 0;">Upload Text File</label>
+                    <button type="button" class="btn-small" onclick="startMarkdown()" style="background: linear-gradient(135deg, #6f42c1, #5a32a3); color: white; padding: 6px 14px; border-radius: 6px; font-size: 12px;">✏️ Write Markdown</button>
+                </div>
+                <div class="file-upload" id="dropZone">
+                    <input type="file" id="fileInput" accept=".txt,.md,.text">
+                    <div class="file-upload-icon">📄</div>
+                    <div class="file-upload-text">Click or drag & drop your text file here<br><small>Format: Item Name----- discount%</small></div>
+                </div>
+            </div>
+
+            <!-- Editor Section (shown after upload) -->
+            <div class="editor-section" id="editorSection">
+                <div class="editor-header">
+                    <h3>📝 Edit Data</h3>
+                    <div class="editor-actions">
+                        <button class="btn-small btn-outline" onclick="uploadNew()">Upload New File</button>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab active" id="tabEdit" onclick="showTab('edit')">Edit</button>
+                    <button class="tab" id="tabPreview" onclick="showTab('preview')">Preview</button>
+                </div>
+
+                <textarea class="editor-textarea" id="editorTextarea" placeholder="Item Name----- 10%&#10;Another Item----- 5%"></textarea>
+                <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
+                    <input type="checkbox" id="enableDeleteButtons" onchange="toggleDeleteButtons()">
+                    <label for="enableDeleteButtons" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                </div>
+
+                <div class="preview-content" id="previewContent">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Item Name</th>
+                                <th>Discount/Bonus</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="item-count" id="itemCount">0 items</div>
+            </div>
+
+            <button class="btn btn-primary" id="generateBtn" onclick="generateHTML()" disabled style="margin-top: 20px;">
+                Generate HTML
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Generating HTML file...</div>
+            </div>
+
+            <div class="result" id="result">
+                <div class="result-card" id="resultCard">
+                    <div id="resultMessage"></div>
+                </div>
+                <div class="result-buttons">
+                    <button class="btn btn-primary" onclick="previewHTML()">
+                        👁️ Preview HTML
+                    </button>
+                    <button class="btn btn-success" onclick="downloadHTML()">
+                        ⬇️ Download HTML
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const editorSection = document.getElementById('editorSection');
+        const editorTextarea = document.getElementById('editorTextarea');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultCard = document.getElementById('resultCard');
+        const resultMessage = document.getElementById('resultMessage');
+        const itemCount = document.getElementById('itemCount');
+        const titleInput = document.getElementById('title');
+        const whatsappInput = document.getElementById('whatsapp_number');
+
+        // Set default date to today (works on all browsers/devices)
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        document.getElementById('list_date').value = `${year}-${month}-${day}`;
+
+        // Load saved values from localStorage
+        const savedTitle = localStorage.getItem('html_maker_title');
+        const savedWhatsapp = localStorage.getItem('html_maker_whatsapp');
+
+        if (savedTitle) titleInput.value = savedTitle;
+        if (savedWhatsapp) whatsappInput.value = savedWhatsapp;
+
+        // Save values to localStorage on change
+        titleInput.addEventListener('input', () => localStorage.setItem('html_maker_title', titleInput.value));
+        whatsappInput.addEventListener('input', () => localStorage.setItem('html_maker_whatsapp', whatsappInput.value));
+
+        // File upload handling
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile();
+            }
+        });
+        fileInput.addEventListener('change', handleFile);
+
+        function handleFile() {
+            if (!fileInput.files.length) return;
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                editorTextarea.value = e.target.result;
+                showEditor();
+                updateItemCount();
+            };
+
+            reader.readAsText(file);
+        }
+
+        function showEditor() {
+            uploadSection.style.display = 'none';
+            editorSection.style.display = 'block';
+            generateBtn.disabled = false;
+        }
+
+        function startMarkdown() {
+            editorTextarea.value = ''; // Start with empty editor
+            editorTextarea.placeholder = 'Type your items here...\n\nFormat:\nItem Name----- 10%\nAnother Item----- 5%';
+            showEditor();
+            editorTextarea.focus();
+            updateItemCount();
+        }
+
+        function uploadNew() {
+            uploadSection.style.display = 'block';
+            editorSection.style.display = 'none';
+            editorTextarea.value = '';
+            fileInput.value = '';
+            generateBtn.disabled = true;
+            result.style.display = 'none';
+        }
+
+        function showTab(tab) {
+            const tabEdit = document.getElementById('tabEdit');
+            const tabPreview = document.getElementById('tabPreview');
+            const textarea = document.getElementById('editorTextarea');
+            const preview = document.getElementById('previewContent');
+
+            if (tab === 'edit') {
+                tabEdit.classList.add('active');
+                tabPreview.classList.remove('active');
+                textarea.style.display = 'block';
+                preview.style.display = 'none';
+            } else {
+                tabEdit.classList.remove('active');
+                tabPreview.classList.add('active');
+                textarea.style.display = 'none';
+                preview.style.display = 'block';
+                updatePreview();
+            }
+        }
+
+        function parseItems(text) {
+            const items = [];
+            const lines = text.split('\n');
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                if (line.includes('→')) line = line.split('→')[1];
+                if (line.includes('-----')) {
+                    const parts = line.split('-----');
+                    const name = parts[0].trim();
+                    let value = parts[1] ? parts[1].trim() : '';
+                    items.push({ name, value });
+                }
+            }
+            // Sort alphabetically by name
+            items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
+            return items;
+        }
+
+        function updatePreview() {
+            const items = parseItems(editorTextarea.value);
+            const tbody = document.getElementById('previewTableBody');
+
+            // Check if delete buttons are currently enabled
+            const deleteCheckbox = document.getElementById('enableDeleteButtons');
+            const deleteButtonsEnabled = deleteCheckbox && deleteCheckbox.checked;
+
+            let html = '';
+            let currentLetter = '';
+
+            items.forEach((item, i) => {
+                const firstLetter = item.name.charAt(0).toUpperCase();
+                if (firstLetter !== currentLetter) {
+                    currentLetter = firstLetter;
+                    html += `<tr style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white;">
+                        <td colspan="${deleteButtonsEnabled ? 4 : 3}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
+                    </tr>`;
+                }
+
+                if (deleteButtonsEnabled) {
+                    html += `<tr>
+                        <td style="width: 40px; padding: 5px; text-align: center;">
+                            <button class="delete-btn" onclick="deleteRow(this.closest('tr'))"
+                                style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
+                                title="Delete this row">✕</button>
+                        </td>
+                        <td>${i + 1}</td>
+                        <td>${item.name}</td>
+                        <td>${item.value}</td>
+                    </tr>`;
+                } else {
+                    html += `<tr>
+                        <td>${i + 1}</td>
+                        <td>${item.name}</td>
+                        <td>${item.value}</td>
+                    </tr>`;
+                }
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function updateItemCount() {
+            const items = parseItems(editorTextarea.value);
+            itemCount.textContent = `${items.length} items`;
+            generateBtn.disabled = items.length === 0;
+        }
+
+        editorTextarea.addEventListener('input', updateItemCount);
+
+        async function generateHTML() {
+            const text = editorTextarea.value.trim();
+            if (!text) {
+                alert('Please enter some data');
+                return;
+            }
+
+            const formData = new FormData();
+            const blob = new Blob([text], { type: 'text/plain' });
+            formData.append('file', blob, 'data.txt');
+            formData.append('list_no', document.getElementById('list_no').value);
+            formData.append('list_date', document.getElementById('list_date').value);
+            formData.append('title', titleInput.value);
+            formData.append('whatsapp_number', whatsappInput.value);
+
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('/generate-html', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.style.display = 'none';
+                result.style.display = 'block';
+
+                if (data.success) {
+                    resultCard.className = 'result-card';
+                    resultMessage.innerHTML = `<strong>✓ Success!</strong> Generated HTML with ${data.count} items<br><small>File: ${data.filename}</small>`;
+                } else {
+                    resultCard.className = 'result-card error';
+                    resultMessage.innerHTML = `<strong>✗ Error:</strong> ${data.error}`;
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                result.style.display = 'block';
+                resultCard.className = 'result-card error';
+                resultMessage.innerHTML = `<strong>✗ Error:</strong> ${error.message}`;
+            }
+
+            generateBtn.disabled = false;
+        }
+
+        function previewHTML() {
+            window.open('/preview-html', '_blank');
+        }
+
+        function downloadHTML() {
+            window.location.href = '/download-html';
+        }
+
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                document.querySelector('.theme-toggle').innerHTML = '🌙';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                document.querySelector('.theme-toggle').innerHTML = '☀️';
+            }
+        }
+
+        // Initialize theme based on localStorage or system preference
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle').innerHTML = '☀️';
+            } else {
+                document.querySelector('.theme-toggle').innerHTML = '🌙';
+            }
+        }
+
+        // Load transferred content from main page if available
+        function loadTransferredContent() {
+            const transferredContent = localStorage.getItem('transferredContent');
+            if (transferredContent) {
+                // Make sure the editor section is visible first
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('editorSection').style.display = 'block';
+                document.getElementById('generateBtn').disabled = false;
+
+                // Set the content in the editor
+                document.getElementById('editorTextarea').value = transferredContent;
+
+                // Update item count and preview
+                updateItemCount();
+                updatePreview();
+
+                // Store the content in session storage with timestamp for 20 minute retention
+                const sessionData = {
+                    content: transferredContent,
+                    timestamp: Date.now()
+                };
+                sessionStorage.setItem('sessionContent', JSON.stringify(sessionData));
+
+                // Clear the transferred content to avoid it persisting
+                localStorage.removeItem('transferredContent');
+            }
+        }
+
+        // Load content from session storage if available
+        function loadSessionContent() {
+            const sessionDataJSON = sessionStorage.getItem('sessionContent');
+            if (sessionDataJSON) {
+                try {
+                    const sessionData = JSON.parse(sessionDataJSON);
+                    const currentTime = Date.now();
+                    const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
+
+                    // Check if the session data is still valid (less than 20 minutes old)
+                    if (currentTime - sessionData.timestamp < twentyMinutes) {
+                        // Make sure the editor section is visible first
+                        document.getElementById('uploadSection').style.display = 'none';
+                        document.getElementById('editorSection').style.display = 'block';
+                        document.getElementById('generateBtn').disabled = false;
+
+                        // Set the content in the editor
+                        document.getElementById('editorTextarea').value = sessionData.content;
+
+                        // Update item count and preview
+                        updateItemCount();
+                        updatePreview();
+                    } else {
+                        // Session expired, remove the old data
+                        sessionStorage.removeItem('sessionContent');
+                    }
+                } catch (e) {
+                    console.error('Error parsing session data:', e);
+                    sessionStorage.removeItem('sessionContent');
+                }
+            }
+        }
+
+        // Save content to session storage periodically
+        function saveToSessionStorage() {
+            const content = document.getElementById('editorTextarea').value;
+            if (content.trim()) {
+                const sessionData = {
+                    content: content,
+                    timestamp: Date.now()
+                };
+                sessionStorage.setItem('sessionContent', JSON.stringify(sessionData));
+            }
+        }
+
+        // Save content when user makes changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const editorTextarea = document.getElementById('editorTextarea');
+            if (editorTextarea) {
+                // Save content when user stops typing for a moment
+                let saveTimeout;
+                editorTextarea.addEventListener('input', function() {
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(saveToSessionStorage, 1000); // Save after 1 second of inactivity
+                });
+
+                // Also save when the window loses focus
+                window.addEventListener('blur', saveToSessionStorage);
+            }
+        });
+
+        // Add event listener to existing theme toggle button
+        document.addEventListener('DOMContentLoaded', function() {
+            const existingThemeToggle = document.querySelector('.theme-toggle');
+            if (existingThemeToggle) {
+                existingThemeToggle.onclick = toggleTheme;
+            } else {
+                // If no theme toggle button exists, create one
+                const themeToggle = document.createElement('button');
+                themeToggle.className = 'theme-toggle';
+                themeToggle.type = 'button';
+                themeToggle.onclick = toggleTheme;
+
+                // Insert the theme toggle button at the top
+                document.querySelector('.container').parentNode.insertBefore(themeToggle, document.querySelector('.container'));
+            }
+
+            // Initialize the theme
+            initTheme();
+
+            // Check for transferred content from main page
+            loadTransferredContent();
+
+            // Check for existing session content
+            loadSessionContent();
+        });
+
+        // Check if page was refreshed by checking session storage for a reload flag
+        // If not a refresh, load session data; if it's a refresh, clear old session data
+        window.addEventListener('load', function() {
+            const pageReloaded = sessionStorage.getItem('pageReloaded');
+            if (!pageReloaded) {
+                // This is not a refresh, so load existing session data
+                loadSessionContent();
+            } else {
+                // This is a refresh, so clear the session data and remove the flag
+                sessionStorage.removeItem('sessionContent');
+                sessionStorage.removeItem('pageReloaded');
+            }
+        });
+
+        // Set flag before page unloads to detect if it's a refresh/navigation
+        window.addEventListener('beforeunload', function() {
+            sessionStorage.setItem('pageReloaded', 'true');
+        });
+
+        // Function to save current state before navigating away
+        function saveStateBeforeNavigation() {
+            saveToSessionStorage();
+        }
+
+        // Save state before navigating to another page
+        document.addEventListener('click', function(e) {
+            // If user clicks on a link or button that navigates away
+            if (e.target.tagName === 'A' || (e.target.tagName === 'BUTTON' && e.target.getAttribute('onclick') && e.target.getAttribute('onclick').includes('/'))) {
+                saveStateBeforeNavigation();
+            }
+        });
+
+        // Toggle delete buttons for preview rows - just refresh the preview
+        function toggleDeleteButtons() {
+            updatePreview();
+        }
+
+        // Delete a row from preview and update textarea
+        function deleteRow(row) {
+            // Get the item details from the row
+            const cells = row.querySelectorAll('td');
+
+            // Determine if delete buttons are enabled based on number of cells
+            const hasDeleteButton = cells.length >= 4; // With delete button, we have 4 cells (delete, #, name, value)
+
+            if (hasDeleteButton && cells.length >= 4) {
+                // With delete buttons enabled, the cells are: [delete, #, name, value]
+                const itemName = cells[2].textContent.trim();
+                const itemValue = cells[3].textContent.trim();
+
+                removeLineFromTextarea(itemName, itemValue);
+            } else if (!hasDeleteButton && cells.length >= 3) {
+                // Without delete buttons, the cells are: [#, name, value]
+                const itemName = cells[1].textContent.trim();
+                const itemValue = cells[2].textContent.trim();
+
+                removeLineFromTextarea(itemName, itemValue);
+            }
+        }
+
+        // Helper function to remove a line from textarea
+        function removeLineFromTextarea(itemName, itemValue) {
+            // Get current text content from textarea
+            const textarea = document.getElementById('editorTextarea');
+            let content = textarea.value;
+
+            // Create the line pattern to remove - match the exact format: "itemName----- itemValue"
+            // Use a more flexible pattern to handle whitespace
+            const escapedName = escapeRegExp(itemName.trim());
+            const escapedValue = escapeRegExp(itemValue.trim());
+
+            // Match lines that have the item name followed by '-----' and then the value
+            const linePattern = new RegExp(`^[\\s]*${escapedName}[\\s]*-----[\\s]*${escapedValue}[\\s]*$`, 'gm');
+
+            // Remove the matching line(s)
+            content = content.replace(linePattern, '').trim();
+            content = content.replace(/^\s*[\r\n]+/gm, ''); // Clean up multiple empty lines
+
+            // Update textarea
+            textarea.value = content;
+
+            // Update item count and preview
+            updateItemCount();
+            updatePreview();
+        }
+
+        // Helper function to escape special regex characters
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+    </script>
+</body>
+</html>
