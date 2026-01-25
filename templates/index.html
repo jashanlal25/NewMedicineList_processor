@@ -968,9 +968,10 @@
         }
 
         .preview-content-main th, .preview-content-main td {
-            padding: 8px 12px;
+            padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
         }
 
         .preview-content-main th {
@@ -980,6 +981,118 @@
 
         .preview-content-main tr:hover {
             background: #f1f3f5;
+        }
+
+        /* Column widths */
+        .preview-content-main .col-delete {
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .preview-content-main .col-num {
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
+            text-align: center;
+        }
+
+        .preview-content-main .col-name {
+            min-width: 150px;
+        }
+
+        .preview-content-main .col-value {
+            width: 90px;
+            min-width: 90px;
+        }
+
+        /* Editable cell hover effect */
+        .preview-content-main .editable-cell {
+            transition: background 0.2s;
+        }
+
+        .preview-content-main .editable-cell:hover {
+            background: #e8f4ff !important;
+        }
+
+        /* Inline edit input styling */
+        .inline-edit-input {
+            width: 100% !important;
+            min-width: 120px !important;
+            padding: 8px 12px !important;
+            border: 2px solid #6f42c1 !important;
+            border-radius: 6px !important;
+            font-size: 14px !important;
+            background: #fff !important;
+            box-sizing: border-box !important;
+            margin: -4px 0;
+        }
+
+        .inline-edit-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.25);
+        }
+
+        /* When editing, allow cell to expand */
+        .preview-content-main td:has(.inline-edit-input) {
+            min-width: 150px !important;
+            overflow: visible;
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 600px) {
+            .preview-content-main {
+                padding: 10px;
+            }
+
+            .preview-content-main table {
+                font-size: 12px;
+            }
+
+            .preview-content-main th, .preview-content-main td {
+                padding: 6px 5px;
+            }
+
+            .preview-content-main .col-delete {
+                width: 32px;
+                min-width: 32px;
+                max-width: 32px;
+                padding: 3px;
+            }
+
+            .preview-content-main .col-num {
+                width: 30px;
+                min-width: 30px;
+                max-width: 30px;
+            }
+
+            .preview-content-main .col-value {
+                width: 70px;
+                min-width: 70px;
+            }
+
+            .preview-content-main .delete-btn {
+                width: 22px !important;
+                height: 22px !important;
+                font-size: 10px !important;
+            }
+
+            /* Mobile inline edit input - reasonable size */
+            .inline-edit-input {
+                width: 100% !important;
+                min-width: 80px !important;
+                padding: 8px 10px !important;
+                font-size: 15px !important;
+                border-radius: 5px !important;
+                margin: -2px 0 !important;
+            }
+
+            /* Give more space to name column on mobile when editing */
+            .preview-content-main .col-name {
+                min-width: 100px;
+            }
         }
 
         .item-count-main {
@@ -1341,18 +1454,24 @@
 
                         <textarea class="editor-textarea-main" id="editorTextarea-${fileCount}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;">${data.text_output}</textarea>
 
-                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
-                            <input type="checkbox" id="enableDeleteButtonsTab-${fileCount}" onchange="toggleDeleteButtonsTab(${fileCount})">
-                            <label for="enableDeleteButtonsTab-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableDeleteButtonsTab-${fileCount}" onchange="toggleDeleteButtonsTab(${fileCount})">
+                                <label for="enableDeleteButtonsTab-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (✕)</label>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableEditButtonsTab-${fileCount}" onchange="toggleEditButtonsTab(${fileCount})" checked>
+                                <label for="enableEditButtonsTab-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row editing (✏️)</label>
+                            </div>
                         </div>
 
                         <div class="preview-content-main" id="previewContent-${fileCount}" style="display: block;">
                             <table>
-                                <thead>
+                                <thead id="previewTableHead-${fileCount}">
                                     <tr>
-                                        <th>#</th>
-                                        <th>Item Name</th>
-                                        <th>Value</th>
+                                        <th class="col-num">#</th>
+                                        <th class="col-name">Item Name</th>
+                                        <th class="col-value">Value</th>
                                     </tr>
                                 </thead>
                                 <tbody id="previewTableBody-${fileCount}"></tbody>
@@ -1453,18 +1572,24 @@
 
                         <textarea class="editor-textarea-main" id="editorTextarea-${editorId}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;"></textarea>
 
-                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
-                            <input type="checkbox" id="enableDeleteButtonsTab-${editorId}" onchange="toggleDeleteButtonsTab(${editorId})">
-                            <label for="enableDeleteButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableDeleteButtonsTab-${editorId}" onchange="toggleDeleteButtonsTab(${editorId})">
+                                <label for="enableDeleteButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (✕)</label>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableEditButtonsTab-${editorId}" onchange="toggleEditButtonsTab(${editorId})" checked>
+                                <label for="enableEditButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row editing (✏️)</label>
+                            </div>
                         </div>
 
                         <div class="preview-content-main" id="previewContent-${editorId}" style="display: block;">
                             <table>
-                                <thead>
+                                <thead id="previewTableHead-${editorId}">
                                     <tr>
-                                        <th>#</th>
-                                        <th>Item Name</th>
-                                        <th>Value</th>
+                                        <th class="col-num">#</th>
+                                        <th class="col-name">Item Name</th>
+                                        <th class="col-value">Value</th>
                                     </tr>
                                 </thead>
                                 <tbody id="previewTableBody-${editorId}"></tbody>
@@ -1537,18 +1662,24 @@
 
                         <textarea class="editor-textarea-main" id="editorTextarea-${editorId}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;"></textarea>
 
-                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
-                            <input type="checkbox" id="enableDeleteButtonsTab-${editorId}" onchange="toggleDeleteButtonsTab(${editorId})">
-                            <label for="enableDeleteButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableDeleteButtonsTab-${editorId}" onchange="toggleDeleteButtonsTab(${editorId})">
+                                <label for="enableDeleteButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (✕)</label>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="enableEditButtonsTab-${editorId}" onchange="toggleEditButtonsTab(${editorId})" checked>
+                                <label for="enableEditButtonsTab-${editorId}" style="margin-left: 5px; cursor: pointer;">Enable row editing (✏️)</label>
+                            </div>
                         </div>
 
                         <div class="preview-content-main" id="previewContent-${editorId}" style="display: block;">
                             <table>
-                                <thead>
+                                <thead id="previewTableHead-${editorId}">
                                     <tr>
-                                        <th>#</th>
-                                        <th>Item Name</th>
-                                        <th>Value</th>
+                                        <th class="col-num">#</th>
+                                        <th class="col-name">Item Name</th>
+                                        <th class="col-value">Value</th>
                                     </tr>
                                 </thead>
                                 <tbody id="previewTableBody-${editorId}"></tbody>
@@ -2186,41 +2317,65 @@
 
             const items = parseMainPageItems(editorTextarea.value, id);
             const tbody = document.getElementById(`previewTableBody-${id}`);
+            const thead = document.getElementById(`previewTableHead-${id}`);
 
-            // Check if delete buttons are currently enabled
+            // Check if delete and edit buttons are currently enabled
             const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
             const deleteButtonsEnabled = deleteCheckbox && deleteCheckbox.checked;
+            const editCheckbox = document.getElementById(`enableEditButtonsTab-${id}`);
+            const editButtonsEnabled = editCheckbox && editCheckbox.checked;
+
+            // Update header based on delete button state
+            if (thead) {
+                let headerHtml = '<tr>';
+                if (deleteButtonsEnabled) {
+                    headerHtml += '<th class="col-delete"></th>';
+                }
+                headerHtml += `<th class="col-num">#</th>
+                    <th class="col-name">Item Name</th>
+                    <th class="col-value">Value</th>
+                </tr>`;
+                thead.innerHTML = headerHtml;
+            }
 
             let html = '';
             let currentLetter = '';
+
+            // Calculate colspan based on delete button only
+            let extraCols = deleteButtonsEnabled ? 1 : 0;
 
             items.forEach((item, i) => {
                 const firstLetter = item.name.charAt(0).toUpperCase();
                 if (firstLetter !== currentLetter) {
                     currentLetter = firstLetter;
                     html += `<tr style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white;">
-                        <td colspan="${deleteButtonsEnabled ? 4 : 3}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
+                        <td colspan="${3 + extraCols}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
                     </tr>`;
                 }
 
+                let rowHtml = '<tr>';
+
+                // Add delete button if enabled
                 if (deleteButtonsEnabled) {
-                    html += `<tr>
-                        <td style="width: 40px; padding: 5px; text-align: center;">
-                            <button class="delete-btn" onclick="deleteRowMainPage('${id}', this.closest('tr'))"
-                                style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
-                                title="Delete this row">✕</button>
-                        </td>
-                        <td>${i + 1}</td>
-                        <td>${item.name}</td>
-                        <td>${item.value}</td>
-                    </tr>`;
-                } else {
-                    html += `<tr>
-                        <td>${i + 1}</td>
-                        <td>${item.name}</td>
-                        <td>${item.value}</td>
-                    </tr>`;
+                    rowHtml += `<td class="col-delete">
+                        <button class="delete-btn" onclick="deleteRowMainPage('${id}', this.closest('tr'))"
+                            style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
+                            title="Delete this row">✕</button>
+                    </td>`;
                 }
+
+                // Make name and value cells clickable for inline editing if enabled
+                const editableStyle = editButtonsEnabled ? 'cursor: pointer;' : '';
+                const editableClass = editButtonsEnabled ? 'editable-cell' : '';
+                const nameClick = editButtonsEnabled ? `onclick="editCellInlineMainPage('${id}', this, 'name', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')"` : '';
+                const valueClick = editButtonsEnabled ? `onclick="editCellInlineMainPage('${id}', this, 'value', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')"` : '';
+
+                rowHtml += `<td class="col-num">${i + 1}</td>
+                    <td class="col-name ${editableClass}" style="${editableStyle}" ${nameClick}>${item.name}</td>
+                    <td class="col-value ${editableClass}" style="${editableStyle}" ${valueClick}>${item.value}</td>
+                </tr>`;
+
+                html += rowHtml;
             });
 
             if (tbody) {
@@ -2246,24 +2401,258 @@
             updateMainPagePreview(id);
         }
 
+        // Toggle edit buttons for main page preview - show pen buttons when checkbox is checked
+        function toggleEditButtonsTab(id) {
+            // Update the preview to show or hide edit buttons based on checkbox state
+            updateMainPagePreview(id);
+        }
+
+        // Helper function to escape HTML for safe attribute values (main page)
+        function escapeHtmlMainPage(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Track if we're currently editing to prevent double-click issues
+        let isEditingMainPage = false;
+        let pendingEditMainPage = null;
+        let currentEditingId = null;
+        let savingInProgress = false;
+
+        // Edit a single cell inline on main page - click on name or value to edit just that cell
+        function editCellInlineMainPage(id, cell, fieldType, itemName, itemValue) {
+            // If save is in progress, just queue the edit
+            if (savingInProgress) {
+                pendingEditMainPage = { id, fieldType, itemName, itemValue };
+                return;
+            }
+
+            // If already editing, queue this edit and save current
+            if (isEditingMainPage) {
+                pendingEditMainPage = { id, fieldType, itemName, itemValue };
+                savingInProgress = true;
+                // Get current input value and save
+                const currentInput = document.querySelector('.inline-edit-input');
+                if (currentInput) {
+                    // Directly save instead of triggering blur
+                    const currentId = currentEditingId;
+                    const inputValue = currentInput.value.trim();
+                    // Get the original data from the input's parent context
+                    const currentCell = currentInput.closest('td');
+                    if (currentCell && currentCell.dataset) {
+                        // Save will be handled by the existing blur handler
+                        currentInput.blur();
+                    } else {
+                        currentInput.blur();
+                    }
+                }
+                return;
+            }
+
+            isEditingMainPage = true;
+            currentEditingId = id;
+            const originalValue = fieldType === 'name' ? itemName : itemValue;
+
+            // Create editable input using CSS class
+            cell.innerHTML = `<input type="text" class="inline-edit-input" value="${escapeHtmlMainPage(originalValue)}">`;
+
+            const input = cell.querySelector('input');
+            input.focus();
+            input.select();
+
+            // Scroll to make input visible (especially important on mobile)
+            setTimeout(() => {
+                const rect = input.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+
+                // If input is near bottom of screen, scroll it up
+                if (rect.bottom > windowHeight - 100) {
+                    const scrollAmount = rect.bottom - (windowHeight - 100);
+                    window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                }
+            }, 100);
+
+            // Store edit context on the input for reference
+            input.dataset.editId = id;
+            input.dataset.editField = fieldType;
+            input.dataset.editName = itemName;
+            input.dataset.editValue = itemValue;
+
+            // Save on Enter, cancel on Escape
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+
+                    // Apply formatting if this is a value field
+                    let formattedValue = input.value.trim();
+                    if (fieldType === 'value') {
+                        if (/^\d+$/.test(formattedValue)) {
+                            // If it's just digits, add .00%
+                            formattedValue = formattedValue + '.00%';
+                        } else if (/^\d+\.\d+$/.test(formattedValue)) {
+                            // If it's number with decimal, ensure it ends with %
+                            if (!formattedValue.endsWith('%')) {
+                                formattedValue = formattedValue + '%';
+                            }
+                        }
+                    }
+
+                    pendingEditMainPage = null;
+                    saveCellEditMainPage(id, fieldType, itemName, itemValue, formattedValue);
+                } else if (e.key === 'Escape') {
+                    isEditingMainPage = false;
+                    pendingEditMainPage = null;
+                    savingInProgress = false;
+                    updateMainPagePreview(id);
+                }
+            });
+
+            input.addEventListener('blur', function() {
+                // Format percentage value on blur if this is a value field
+                if (fieldType === 'value') {
+                    const currentValue = input.value.trim();
+                    if (/^\d+$/.test(currentValue)) {
+                        // If it's just digits, add .00%
+                        input.value = currentValue + '.00%';
+                    } else if (/^\d+\.\d+$/.test(currentValue)) {
+                        // If it's number with decimal, ensure it ends with %
+                        if (!currentValue.endsWith('%')) {
+                            input.value = currentValue + '%';
+                        }
+                    }
+                }
+
+                setTimeout(() => {
+                    if (isEditingMainPage && !savingInProgress) {
+                        savingInProgress = true;
+                        saveCellEditMainPage(id, fieldType, itemName, itemValue, input.value.trim());
+                    } else if (isEditingMainPage && savingInProgress) {
+                        // Already saving, just let it complete
+                        saveCellEditMainPage(id, fieldType, itemName, itemValue, input.value.trim());
+                    }
+                }, 50);
+            });
+        }
+
+        // Save single cell edit on main page
+        function saveCellEditMainPage(id, fieldType, originalName, originalValue, newValue) {
+            // Prevent double saves
+            if (!isEditingMainPage && !savingInProgress) {
+                return;
+            }
+
+            isEditingMainPage = false;
+
+            if (fieldType === 'name' && !newValue) {
+                alert('Item name cannot be empty');
+                savingInProgress = false;
+                updateMainPagePreview(id);
+                checkPendingEditMainPage();
+                return;
+            }
+
+            // Update the textarea
+            const textarea = document.getElementById(`editorTextarea-${id}`);
+            if (!textarea) {
+                savingInProgress = false;
+                checkPendingEditMainPage();
+                return;
+            }
+
+            let content = textarea.value;
+
+            // Find and replace the line
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes(originalName) && lines[i].includes('-----')) {
+                    if (fieldType === 'name') {
+                        lines[i] = `${newValue}----- ${originalValue}`;
+                    } else {
+                        lines[i] = `${originalName}----- ${newValue}`;
+                    }
+                    break;
+                }
+            }
+
+            textarea.value = lines.join('\n');
+
+            // Also update the original markdown textarea
+            const originalTextarea = document.getElementById(`markdown-${id}`);
+            if (originalTextarea) {
+                originalTextarea.value = textarea.value;
+            }
+
+            // Update item count and refresh preview
+            updateMainPageItemCount(id);
+            updateMainPagePreview(id);
+
+            // Reset flags and check for pending edit
+            savingInProgress = false;
+            checkPendingEditMainPage();
+        }
+
+        // Check and execute pending edit on main page by finding the cell in refreshed DOM
+        function checkPendingEditMainPage() {
+            if (pendingEditMainPage) {
+                const { id, fieldType, itemName, itemValue } = pendingEditMainPage;
+                pendingEditMainPage = null;
+
+                // Find the cell in the refreshed preview table
+                setTimeout(() => {
+                    const rows = document.querySelectorAll(`#previewTableBody-${id} tr`);
+                    for (const row of rows) {
+                        const cells = row.querySelectorAll('td');
+                        // Skip header rows (single cell spanning multiple columns)
+                        if (cells.length < 3) continue;
+
+                        // Find the name and value cells
+                        const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
+                        const offset = (deleteCheckbox && deleteCheckbox.checked) ? 1 : 0;
+
+                        const nameCell = cells[offset + 1];
+                        const valueCell = cells[offset + 2];
+
+                        // Decode HTML entities for comparison
+                        const cellText = nameCell ? nameCell.textContent.trim() : '';
+                        const searchName = decodeHtmlEntities(itemName);
+
+                        if (cellText === searchName) {
+                            const targetCell = fieldType === 'name' ? nameCell : valueCell;
+                            editCellInlineMainPage(id, targetCell, fieldType, itemName, itemValue);
+                            break;
+                        }
+                    }
+                }, 50);
+            }
+        }
+
+        // Helper to decode HTML entities
+        function decodeHtmlEntities(text) {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            return textarea.value;
+        }
+
         // Delete a row from main page preview (same concept as make_html)
         function deleteRowMainPage(id, row) {
             // Get the item details from the row
             const cells = row.querySelectorAll('td');
 
-            // Determine if delete buttons are enabled based on number of cells
-            const hasDeleteButton = cells.length >= 4; // With delete button, we have 4 cells (delete, #, name, value)
+            // Check if delete button is enabled to determine column structure
+            const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
+            const deleteEnabled = deleteCheckbox && deleteCheckbox.checked;
 
-            if (hasDeleteButton && cells.length >= 4) {
-                // With delete buttons enabled, the cells are: [delete, #, name, value]
-                const itemName = cells[2].textContent.trim();
-                const itemValue = cells[3].textContent.trim();
+            // Calculate offset: [delete?] # name value
+            let offset = deleteEnabled ? 1 : 0;
 
-                removeLineFromMainPageTextarea(id, itemName, itemValue);
-            } else if (!hasDeleteButton && cells.length >= 3) {
-                // Without delete buttons, the cells are: [#, name, value]
-                const itemName = cells[1].textContent.trim();
-                const itemValue = cells[2].textContent.trim();
+            if (cells.length >= 3 + offset) {
+                const itemName = cells[offset + 1].textContent.trim();
+                const itemValue = cells[offset + 2].textContent.trim();
 
                 removeLineFromMainPageTextarea(id, itemName, itemValue);
             }

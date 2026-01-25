@@ -18,12 +18,27 @@ def parse_data_txt(filepath):
     return items
 
 def parse_discount_value(value):
-    """Parse discount/bonus value and return (discount_num, bonus_str)"""
+    """Parse discount/bonus value and return (discount_num, bonus_str)
+
+    The '/' character is used as a separator between discount and bonus.
+    Examples:
+        - "10%/5+5" → discount=10.0, bonus="5+5"
+        - "TP,/something" → discount=0.0, bonus="TP,/something" (TP with bonus)
+        - "15" → discount=15.0, bonus=""
+    """
+    # First, check if '/' is used as separator for bonus
+    bonus_part = ""
+    main_value = value
+    if '/' in value:
+        slash_pos = value.find('/')
+        main_value = value[:slash_pos].strip()
+        bonus_part = value[slash_pos+1:].strip()
+
     # Check if it's a "NET" value (which typically comes with numbers like "140 NET")
-    if 'net' in value.lower():
+    if 'net' in main_value.lower():
         # For values like "140 NET", treat the number as discount and "NET" as additional info
         # Split by space and try to find the numeric part
-        parts = value.split()
+        parts = main_value.split()
         for part in parts:
             if any(c.isdigit() for c in part):
                 try:
@@ -31,34 +46,46 @@ def parse_discount_value(value):
                     num_str = ''.join(c for c in part if c.isdigit() or c == '.')
                     discount = float(num_str) if num_str else 0.0
                     # Return the whole value as additional info since it's a net price
-                    return discount, value.strip()
+                    return discount, main_value.strip() if not bonus_part else bonus_part
                 except:
                     pass
         # If we can't parse it as a number, treat it as a special case
-        net_match = re.search(r'net(.*)', value, re.IGNORECASE)
+        net_match = re.search(r'net(.*)', main_value, re.IGNORECASE)
         if net_match:
             additional_part = net_match.group(1).strip()
-            return 0.0, f"net{additional_part}"
+            return 0.0, f"net{additional_part}" if not bonus_part else bonus_part
         else:
-            return 0.0, value
+            return 0.0, main_value if not bonus_part else bonus_part
 
-    elif '%' in value:
-        # Extract numeric part but keep any additional separators in the bonus_str
-        percent_pos = value.find('%')
-        num_part = value[:percent_pos+1]  # Include the % sign
-        num = num_part.replace('%', '').strip()
+    elif '%' in main_value:
+        # Extract numeric part from percentage
+        percent_pos = main_value.find('%')
+        num_part = main_value[:percent_pos]  # Before the % sign
+        num = num_part.strip()
         try:
             discount = float(num)
         except:
             discount = 0.0
-        # Any text after the % is treated as additional information/separators
-        additional_part = value[percent_pos+1:].strip()
-        return discount, additional_part
-    elif value.upper() == 'TP':
-        return 0.0, "TP"
+        # If there's content after % in main_value (before /), include it
+        after_percent = main_value[percent_pos+1:].strip()
+        if bonus_part:
+            # '/' was used, so bonus_part is the bonus
+            return discount, bonus_part
+        elif after_percent:
+            # No '/', but there's text after % - treat as additional info
+            return discount, after_percent
+        else:
+            return discount, ""
+    elif 'TP' in main_value.upper():
+        # Return TP value (preserving any separators like "TP," or "Tp,")
+        # If bonus_part exists, combine main_value with bonus info
+        if bonus_part:
+            return 0.0, f"{main_value}/{bonus_part}"
+        return 0.0, main_value.strip()
     else:
         try:
-            return float(value), ""
+            discount = float(main_value)
+            return discount, bonus_part
         except:
             return 0.0, value
 
@@ -68,24 +95,43 @@ def generate_item_row(serial, item_name, value):
     hidden_name = item_name.upper().ljust(50)
     discount, bonus = parse_discount_value(value)
 
+    # Check if '/' was used in original value (bonus separator)
+    has_slash_separator = '/' in value
+
     # Check if the original value contains "net" to handle "140 NET" type values specially
     original_value_lower = value.lower().strip()
 
     if 'net' in original_value_lower and any(c.isdigit() for c in value):
         # For values like "140 NET", display the original value in the discount column
-        discount_str = f'{value}'.rjust(len(value))
+        if has_slash_separator:
+            # Extract main part before /
+            main_part = value.split('/')[0].strip()
+            discount_str = f'{main_part}'.rjust(len(main_part))
+            bonus_str = bonus.ljust(44) if bonus else ' ' * 44
+        else:
+            discount_str = f'{value}'.rjust(len(value))
+            bonus_str = ' ' * 44
+    elif bonus and 'TP' in bonus.upper() and '/' in bonus:
+        # Handle TP values with bonus separator like "TP,/something"
+        tp_part, bonus_after = bonus.split('/', 1)
+        discount_str = f'{tp_part}'.rjust(9)
+        bonus_str = bonus_after.ljust(44) if bonus_after else ' ' * 44
+    elif bonus and 'TP' in bonus.upper():
+        # Handle TP values without separator (just "TP" or "TP,")
+        discount_str = f'{bonus}'.rjust(9)
         bonus_str = ' ' * 44
-    elif bonus and bonus != "TP":
-        # If we have a discount value but also additional separators, include the separator
-        if discount > 0:  # It's a percentage discount with additional separators
+    elif has_slash_separator and bonus:
+        # '/' was used as separator - bonus goes in bonus column
+        discount_str = f'{discount:.2f}%'.rjust(9)
+        bonus_str = bonus.ljust(44)
+    elif bonus:
+        # No '/' separator but there's text after % - append to discount
+        if discount > 0:
             discount_str = f'{discount:.2f}%{bonus}'.rjust(9 + len(bonus))
             bonus_str = ' ' * 44
-        else:  # It's a special case (like just "net") with additional separators
+        else:
             discount_str = f'0.00%{bonus}'.rjust(9 + len(bonus))
             bonus_str = ' ' * 44
-    elif bonus == "TP":
-        discount_str = f'   TP{bonus}'.rjust(9 + len(bonus)) if bonus else '       TP'
-        bonus_str = ' ' * 44
     else:
         discount_str = f'{discount:.2f}%'.rjust(9)
         bonus_str = ' ' * 44
@@ -111,12 +157,50 @@ def generate_js_vars_full(data_items):
     js_vars = ""
     for i, (item_name, value) in enumerate(data_items, 1):
         discount, bonus = parse_discount_value(value)
-        bonus_str = f'"{bonus}"' if bonus else '""'
-        js_vars += f'''
+        has_slash = '/' in value
+
+        # Special handling for "TP" and similar non-numeric values
+        if 'TP' in value.upper():
+            if has_slash and '/' in bonus:
+                # TP with bonus separator like "TP,/5+5"
+                tp_part, bonus_after = bonus.split('/', 1)
+                discount_str = f'"{tp_part}"'
+                bonus_str = f'"{bonus_after}"' if bonus_after else '""'
+            else:
+                # Plain TP or TP with comma
+                discount_str = f'"{value}"'
+                bonus_str = '""'
+            js_vars += f'''
 var ITMCODE{i} = "{i}";
 var ITMNAME{i} =document.getElementById("itnameid{i}").value;
 var ITMBONUS{i} = {bonus_str};
-var ITMDISC{i} =       {discount:8.2f}    ;
+var ITMDISC{i} = {discount_str};
+var namevar{i}=document.getElementById("nameid{i}").value;
+'''
+        elif 'net' in value.lower():
+            # For NET values like "330 NET", keep the original value
+            if has_slash:
+                main_part = value.split('/')[0].strip()
+                discount_str = f'"{main_part}"'
+                bonus_str = f'"{bonus}"' if bonus else '""'
+            else:
+                discount_str = f'"{value}"'
+                bonus_str = '""'
+            js_vars += f'''
+var ITMCODE{i} = "{i}";
+var ITMNAME{i} =document.getElementById("itnameid{i}").value;
+var ITMBONUS{i} = {bonus_str};
+var ITMDISC{i} = {discount_str};
+var namevar{i}=document.getElementById("nameid{i}").value;
+'''
+        else:
+            # For numeric values
+            bonus_str = f'"{bonus}"' if bonus else '""'
+            js_vars += f'''
+var ITMCODE{i} = "{i}";
+var ITMNAME{i} =document.getElementById("itnameid{i}").value;
+var ITMBONUS{i} = {bonus_str};
+var ITMDISC{i} = "{discount:.2f}";
 var namevar{i}=document.getElementById("nameid{i}").value;
 '''
     return js_vars
@@ -126,15 +210,55 @@ def generate_js_vars_createrows(data_items):
     js_vars = ""
     for i, (item_name, value) in enumerate(data_items, 1):
         discount, bonus = parse_discount_value(value)
-        bonus_str = f'"{bonus}"' if bonus else '""'
-        js_vars += f'''var ITMCODE{i} = "{i}";
+        has_slash = '/' in value
+
+        # Special handling for "TP" and similar non-numeric values
+        if 'TP' in value.upper():
+            if has_slash and '/' in bonus:
+                # TP with bonus separator like "TP,/5+5"
+                tp_part, bonus_after = bonus.split('/', 1)
+                discount_str = f'"{tp_part}"'
+                bonus_str = f'"{bonus_after}"' if bonus_after else '""'
+            else:
+                discount_str = f'"{value}"'
+                bonus_str = '""'
+            js_vars += f'''var ITMCODE{i} = "{i}";
 var ITMNAME{i} =document.getElementById("itnameid{i}").value;
 var ITMBONUS{i} = {bonus_str};
-var ITMDISC{i} =      {discount:6.2f}      ;
+var ITMDISC{i} = {discount_str};
 var namevar{i}=document.getElementById("nameid{i}").value;
 
 var namevarr{i} = " ";
-var ITMDISC{i} = ITMDISC{i}+'%';
+// Don't append % to non-numeric values like TP
+'''
+        elif 'net' in value.lower():
+            # For NET values like "330 NET"
+            if has_slash:
+                main_part = value.split('/')[0].strip()
+                discount_str = f'"{main_part}"'
+                bonus_str = f'"{bonus}"' if bonus else '""'
+            else:
+                discount_str = f'"{value}"'
+                bonus_str = '""'
+            js_vars += f'''var ITMCODE{i} = "{i}";
+var ITMNAME{i} =document.getElementById("itnameid{i}").value;
+var ITMBONUS{i} = {bonus_str};
+var ITMDISC{i} = {discount_str};
+var namevar{i}=document.getElementById("nameid{i}").value;
+
+var namevarr{i} = " ";
+// Don't append % to NET values
+'''
+        else:
+            # For numeric values
+            bonus_str = f'"{bonus}"' if bonus else '""'
+            js_vars += f'''var ITMCODE{i} = "{i}";
+var ITMNAME{i} =document.getElementById("itnameid{i}").value;
+var ITMBONUS{i} = {bonus_str};
+var ITMDISC{i} = "{discount:.2f}%";
+var namevar{i}=document.getElementById("nameid{i}").value;
+
+var namevarr{i} = " ";
 '''
     return js_vars
 
@@ -143,11 +267,29 @@ def generate_js_vars_simple(data_items):
     js_vars = ""
     for i, (item_name, value) in enumerate(data_items, 1):
         discount, bonus = parse_discount_value(value)
+        has_slash = '/' in value
 
-        # Set bonus string appropriately
-        bonus_str = f'"{bonus}"' if bonus else '""'
-
-        js_vars += f'''
+        # Special handling for "TP" and similar non-numeric values
+        if 'TP' in value.upper():
+            if has_slash and '/' in bonus:
+                # TP with bonus separator like "TP,/5+5"
+                tp_part, bonus_after = bonus.split('/', 1)
+                discount_str = f'"{tp_part}"'
+                bonus_str = f'"{bonus_after}"' if bonus_after else '""'
+            else:
+                discount_str = f'"{value}"'
+                bonus_str = '""'
+            js_vars += f'''
+var ITMCODE{i} = "{i}";
+var ITMNAME{i} =document.getElementById("itnameid{i}").value;
+var ITMBONUS{i} = {bonus_str};
+var ITMDISC{i} = {discount_str};
+var namevar{i}=document.getElementById("nameid{i}").value;
+'''
+        else:
+            # For numeric values
+            bonus_str = f'"{bonus}"' if bonus else '""'
+            js_vars += f'''
 var ITMCODE{i} = "{i}";
 var ITMNAME{i} =document.getElementById("itnameid{i}").value;
 var ITMBONUS{i} = {bonus_str};
@@ -160,7 +302,32 @@ def generate_js_if_blocks(data_items, window_var='mywindow'):
     """Generate JS if blocks for Printf and myfun"""
     js_blocks = ""
     for i in range(1, len(data_items) + 1):
-        js_blocks += f'''if(namevar{i}==0 ){{
+        item_value = data_items[i-1][1]  # Get the original value
+        is_special = 'TP' in item_value.upper() or 'net' in item_value.lower()
+
+        if is_special:
+            # For TP and NET values, don't append %
+            js_blocks += f'''if(namevar{i}==0 ){{
+}}
+else {{
+
+var serial = (serial+1);
+ {window_var}.document.write('<tr class="item"><td align="center">');
+ {window_var}.document.write(ITMCODE{i});
+ {window_var}.document.write('</td><td style="text-align:left;">');
+ {window_var}.document.write(ITMNAME{i});
+ {window_var}.document.write('</td><td align="right">');
+ {window_var}.document.write(namevar{i});
+ {window_var}.document.write('</td><td align="right">');
+ {window_var}.document.write(ITMDISC{i});
+ {window_var}.document.write('</td><td align="center">');
+ {window_var}.document.write(ITMBONUS{i});
+ {window_var}.document.write('</td></tr>');
+}}
+'''
+        else:
+            # For regular percentage values, append %
+            js_blocks += f'''if(namevar{i}==0 ){{
 }}
 else {{
 
@@ -199,9 +366,33 @@ def generate_js_if_blocks_whatsapp(data_items):
     js_blocks = ""
 
     for i in range(1, len(data_items) + 1):
+        # Check if this is a special case like "TP" that shouldn't get % appended
+        item_value = data_items[i-1][1]  # Get the original value
+        is_special_value = item_value.upper() == 'TP' or 'TP' in item_value.upper()
+
         if i <= 3:  # Add header check to first few items to ensure it gets added
             # For the first few items, add header if it hasn't been added yet
-            js_blocks += f'''if(namevar{i}==0 ){{
+            if is_special_value:
+                # For special values like TP, don't add % to discText
+                js_blocks += f'''if(namevar{i}==0 ){{
+}}
+else {{
+// Add header once at the beginning if it hasn't been added yet
+if(text == "") {{
+ text = "*Name* :%0a*List no* :000085(1)%0a--------------------%0a|%20*Code*%20|%20*QTY*%20|%20*ITM*%20|%20*DISC*%20|%20*Bonus*%20|%0a--------------------%0a";
+}}
+var serial = (serial+1);
+
+ // For special values like TP, don't append %
+ var discText = ITMDISC{i};
+ // Show bonus in bonus column if discount is 0, otherwise show empty
+ var bonusText = ITMBONUS{i};
+ var text=text+"|"+ITMCODE{i}+"%20|%20"+namevar{i}+"%20|%20"+ITMNAME{i}+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a";
+}}
+'''
+            else:
+                # For numeric values, use original logic
+                js_blocks += f'''if(namevar{i}==0 ){{
 }}
 else {{
 // Add header once at the beginning if it hasn't been added yet
@@ -219,7 +410,23 @@ var serial = (serial+1);
 '''
         elif i == len(data_items):
             # For the last item, add the item and total
-            js_blocks += f'''if(namevar{i}==0 ){{
+            if is_special_value:
+                # For special values like TP, don't add % to discText
+                js_blocks += f'''if(namevar{i}==0 ){{
+}}
+else {{
+var serial = (serial+1);
+
+ // For special values like TP, don't append %
+ var discText = ITMDISC{i};
+ // Show bonus in bonus column if discount is 0, otherwise show empty
+ var bonusText = ITMBONUS{i};
+ var text=text+"|"+ITMCODE{i}+"%20|%20"+namevar{i}+"%20|%20"+ITMNAME{i}+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a"+"%0a*Total* *Items* : "+serial;
+}}
+'''
+            else:
+                # For numeric values, use original logic
+                js_blocks += f'''if(namevar{i}==0 ){{
 }}
 else {{
 var serial = (serial+1);
@@ -233,7 +440,23 @@ var serial = (serial+1);
 '''
         else:
             # For other items, just add the item
-            js_blocks += f'''if(namevar{i}==0 ){{
+            if is_special_value:
+                # For special values like TP, don't add % to discText
+                js_blocks += f'''if(namevar{i}==0 ){{
+}}
+else {{
+var serial = (serial+1);
+
+ // For special values like TP, don't append %
+ var discText = ITMDISC{i};
+ // Show bonus in bonus column if discount is 0, otherwise show empty
+ var bonusText = ITMBONUS{i};
+ var text=text+"|"+ITMCODE{i}+"%20|%20"+namevar{i}+"%20|%20"+ITMNAME{i}+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a";
+}}
+'''
+            else:
+                # For numeric values, use original logic
+                js_blocks += f'''if(namevar{i}==0 ){{
 }}
 else {{
 var serial = (serial+1);

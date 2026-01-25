@@ -379,9 +379,10 @@
         }
 
         .preview-content th, .preview-content td {
-            padding: 8px 12px;
+            padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
         }
 
         .preview-content th {
@@ -393,12 +394,128 @@
             background: #f1f3f5;
         }
 
+        /* Column widths */
+        .preview-content .col-delete {
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .preview-content .col-num {
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
+            text-align: center;
+        }
+
+        .preview-content .col-name {
+            min-width: 150px;
+        }
+
+        .preview-content .col-value {
+            width: 90px;
+            min-width: 90px;
+        }
+
+        /* Editable cell hover effect */
+        .preview-content .editable-cell {
+            transition: background 0.2s;
+        }
+
+        .preview-content .editable-cell:hover {
+            background: #e8f4ff !important;
+        }
+
+        /* Inline edit input styling */
+        .inline-edit-input {
+            width: 100% !important;
+            min-width: 120px !important;
+            padding: 8px 12px !important;
+            border: 2px solid #6f42c1 !important;
+            border-radius: 6px !important;
+            font-size: 14px !important;
+            background: #fff !important;
+            box-sizing: border-box !important;
+            margin: -4px 0;
+        }
+
+        .inline-edit-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.25);
+        }
+
+        /* When editing, allow cell to expand */
+        .preview-content td:has(.inline-edit-input) {
+            min-width: 150px !important;
+            overflow: visible;
+        }
+
         @media (max-width: 600px) {
             .row {
                 flex-direction: column;
             }
             .result-buttons {
                 flex-direction: column;
+            }
+
+            /* Mobile table adjustments */
+            .preview-content {
+                padding: 10px;
+            }
+
+            .preview-content table {
+                font-size: 12px;
+            }
+
+            .preview-content th, .preview-content td {
+                padding: 6px 5px;
+            }
+
+            .preview-content .col-delete {
+                width: 32px;
+                min-width: 32px;
+                max-width: 32px;
+                padding: 3px;
+            }
+
+            .preview-content .col-num {
+                width: 30px;
+                min-width: 30px;
+                max-width: 30px;
+            }
+
+            .preview-content .col-value {
+                width: 70px;
+                min-width: 70px;
+            }
+
+            .preview-content .delete-btn {
+                width: 22px !important;
+                height: 22px !important;
+                font-size: 10px !important;
+            }
+
+            /* Mobile inline edit input - reasonable size */
+            .inline-edit-input {
+                width: 100% !important;
+                min-width: 80px !important;
+                padding: 8px 10px !important;
+                font-size: 15px !important;
+                border-radius: 5px !important;
+                margin: -2px 0 !important;
+            }
+
+            /* Checkbox options - stack vertically on mobile */
+            #editorSection > div[style*="gap: 20px"] {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            /* Give more space to name column on mobile when editing */
+            .preview-content .col-name {
+                min-width: 100px;
             }
         }
     </style>
@@ -462,18 +579,24 @@
                 </div>
 
                 <textarea class="editor-textarea" id="editorTextarea" placeholder="Item Name----- 10%&#10;Another Item----- 5%"></textarea>
-                <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center;">
-                    <input type="checkbox" id="enableDeleteButtons" onchange="toggleDeleteButtons()">
-                    <label for="enableDeleteButtons" style="margin-left: 5px; cursor: pointer;">Enable row deletion (click X to remove rows)</label>
+                <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center;">
+                        <input type="checkbox" id="enableDeleteButtons" onchange="toggleDeleteButtons()">
+                        <label for="enableDeleteButtons" style="margin-left: 5px; cursor: pointer;">Enable row deletion (✕)</label>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <input type="checkbox" id="enableEditButtons" onchange="toggleEditButtons()" checked>
+                        <label for="enableEditButtons" style="margin-left: 5px; cursor: pointer;">Enable row editing (✏️)</label>
+                    </div>
                 </div>
 
                 <div class="preview-content" id="previewContent">
                     <table>
-                        <thead>
+                        <thead id="previewTableHead">
                             <tr>
-                                <th>#</th>
-                                <th>Item Name</th>
-                                <th>Discount/Bonus</th>
+                                <th class="col-num">#</th>
+                                <th class="col-name">Item Name</th>
+                                <th class="col-value">Discount/Bonus</th>
                             </tr>
                         </thead>
                         <tbody id="previewTableBody"></tbody>
@@ -481,7 +604,13 @@
                 </div>
 
                 <div class="item-count" id="itemCount">0 items</div>
+
+            <div class="actions" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-sort btn-small" onclick="sortAlphabetically()" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.2s;">
+                    🔤 Sort A-Z
+                </button>
             </div>
+        </div>
 
             <button class="btn btn-primary" id="generateBtn" onclick="generateHTML()" disabled style="margin-top: 20px;">
                 Generate HTML
@@ -639,41 +768,63 @@
         function updatePreview() {
             const items = parseItems(editorTextarea.value);
             const tbody = document.getElementById('previewTableBody');
+            const thead = document.getElementById('previewTableHead');
 
-            // Check if delete buttons are currently enabled
+            // Check if delete and edit buttons are currently enabled
             const deleteCheckbox = document.getElementById('enableDeleteButtons');
             const deleteButtonsEnabled = deleteCheckbox && deleteCheckbox.checked;
+            const editCheckbox = document.getElementById('enableEditButtons');
+            const editButtonsEnabled = editCheckbox && editCheckbox.checked;
+
+            // Update header based on delete button state
+            let headerHtml = '<tr>';
+            if (deleteButtonsEnabled) {
+                headerHtml += '<th class="col-delete"></th>';
+            }
+            headerHtml += `<th class="col-num">#</th>
+                <th class="col-name">Item Name</th>
+                <th class="col-value">Discount/Bonus</th>
+            </tr>`;
+            thead.innerHTML = headerHtml;
 
             let html = '';
             let currentLetter = '';
+
+            // Calculate colspan based on enabled buttons
+            let extraCols = deleteButtonsEnabled ? 1 : 0;
 
             items.forEach((item, i) => {
                 const firstLetter = item.name.charAt(0).toUpperCase();
                 if (firstLetter !== currentLetter) {
                     currentLetter = firstLetter;
                     html += `<tr style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white;">
-                        <td colspan="${deleteButtonsEnabled ? 4 : 3}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
+                        <td colspan="${3 + extraCols}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
                     </tr>`;
                 }
 
+                let rowHtml = '<tr>';
+
+                // Add delete button if enabled
                 if (deleteButtonsEnabled) {
-                    html += `<tr>
-                        <td style="width: 40px; padding: 5px; text-align: center;">
-                            <button class="delete-btn" onclick="deleteRow(this.closest('tr'))"
-                                style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
-                                title="Delete this row">✕</button>
-                        </td>
-                        <td>${i + 1}</td>
-                        <td>${item.name}</td>
-                        <td>${item.value}</td>
-                    </tr>`;
-                } else {
-                    html += `<tr>
-                        <td>${i + 1}</td>
-                        <td>${item.name}</td>
-                        <td>${item.value}</td>
-                    </tr>`;
+                    rowHtml += `<td class="col-delete">
+                        <button class="delete-btn" onclick="deleteRow(this.closest('tr'))"
+                            style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
+                            title="Delete this row">✕</button>
+                    </td>`;
                 }
+
+                // Make name and value cells clickable for inline editing if enabled
+                const editableStyle = editButtonsEnabled ? 'cursor: pointer;' : '';
+                const editableClass = editButtonsEnabled ? 'editable-cell' : '';
+                const nameClick = editButtonsEnabled ? `onclick="editCellInline(this, 'name', '${escapeHtml(item.name)}', '${escapeHtml(item.value)}')"` : '';
+                const valueClick = editButtonsEnabled ? `onclick="editCellInline(this, 'value', '${escapeHtml(item.name)}', '${escapeHtml(item.value)}')"` : '';
+
+                rowHtml += `<td class="col-num">${i + 1}</td>
+                    <td class="col-name ${editableClass}" style="${editableStyle}" ${nameClick}>${item.name}</td>
+                    <td class="col-value ${editableClass}" style="${editableStyle}" ${valueClick}>${item.value}</td>
+                </tr>`;
+
+                html += rowHtml;
             });
 
             tbody.innerHTML = html;
@@ -923,24 +1074,213 @@
             updatePreview();
         }
 
+        // Toggle edit buttons for preview rows - just refresh the preview
+        function toggleEditButtons() {
+            updatePreview();
+        }
+
+        // Helper function to escape HTML for safe attribute values
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Track if we're currently editing to prevent double-click issues
+        let isEditing = false;
+        let pendingEdit = null;
+        let savingInProgress = false;
+
+        // Edit a single cell inline - click on name or value to edit just that cell
+        function editCellInline(cell, fieldType, itemName, itemValue) {
+            // If save is in progress, just queue the edit
+            if (savingInProgress) {
+                pendingEdit = { fieldType, itemName, itemValue };
+                return;
+            }
+
+            // If already editing, queue this edit and save current
+            if (isEditing) {
+                pendingEdit = { fieldType, itemName, itemValue };
+                savingInProgress = true;
+                // Force save current edit
+                const currentInput = document.querySelector('.inline-edit-input');
+                if (currentInput) {
+                    currentInput.blur();
+                }
+                return;
+            }
+
+            isEditing = true;
+            const originalValue = fieldType === 'name' ? itemName : itemValue;
+
+            // Create editable input using CSS class
+            cell.innerHTML = `<input type="text" class="inline-edit-input" value="${escapeHtml(originalValue)}">`;
+
+            const input = cell.querySelector('input');
+            input.focus();
+            input.select();
+
+            // Scroll to make input visible (especially important on mobile)
+            setTimeout(() => {
+                const rect = input.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+
+                // If input is near bottom of screen, scroll it up
+                if (rect.bottom > windowHeight - 100) {
+                    const scrollAmount = rect.bottom - (windowHeight - 100);
+                    window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                }
+            }, 100);
+
+            // Save on Enter, cancel on Escape
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+
+                    // Apply formatting if this is a value field
+                    let formattedValue = input.value.trim();
+                    if (fieldType === 'value') {
+                        if (/^\d+$/.test(formattedValue)) {
+                            // If it's just digits, add .00%
+                            formattedValue = formattedValue + '.00%';
+                        } else if (/^\d+\.\d+$/.test(formattedValue)) {
+                            // If it's number with decimal, ensure it ends with %
+                            if (!formattedValue.endsWith('%')) {
+                                formattedValue = formattedValue + '%';
+                            }
+                        }
+                    }
+
+                    pendingEdit = null;
+                    saveCellEdit(fieldType, itemName, itemValue, formattedValue);
+                } else if (e.key === 'Escape') {
+                    isEditing = false;
+                    pendingEdit = null;
+                    savingInProgress = false;
+                    updatePreview();
+                }
+            });
+
+            input.addEventListener('blur', function() {
+                // Format percentage value on blur if this is a value field
+                if (fieldType === 'value') {
+                    const currentValue = input.value.trim();
+                    if (/^\d+$/.test(currentValue)) {
+                        // If it's just digits, add .00%
+                        input.value = currentValue + '.00%';
+                    } else if (/^\d+\.\d+$/.test(currentValue)) {
+                        // If it's number with decimal, ensure it ends with %
+                        if (!currentValue.endsWith('%')) {
+                            input.value = currentValue + '%';
+                        }
+                    }
+                }
+
+                setTimeout(() => {
+                    if (isEditing) {
+                        savingInProgress = true;
+                        saveCellEdit(fieldType, itemName, itemValue, input.value.trim());
+                    }
+                }, 50);
+            });
+        }
+
+        // Save single cell edit
+        function saveCellEdit(fieldType, originalName, originalValue, newValue) {
+            // Prevent double saves
+            if (!isEditing && !savingInProgress) {
+                return;
+            }
+
+            isEditing = false;
+
+            if (fieldType === 'name' && !newValue) {
+                alert('Item name cannot be empty');
+                savingInProgress = false;
+                updatePreview();
+                checkPendingEdit();
+                return;
+            }
+
+            // Update the textarea
+            const textarea = document.getElementById('editorTextarea');
+            let content = textarea.value;
+
+            // Find and replace the line
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes(originalName) && lines[i].includes('-----')) {
+                    if (fieldType === 'name') {
+                        lines[i] = `${newValue}----- ${originalValue}`;
+                    } else {
+                        lines[i] = `${originalName}----- ${newValue}`;
+                    }
+                    break;
+                }
+            }
+
+            textarea.value = lines.join('\n');
+
+            // Update item count and refresh preview
+            updateItemCount();
+            updatePreview();
+
+            // Reset flags and check for pending edit
+            savingInProgress = false;
+            checkPendingEdit();
+        }
+
+        // Check and execute pending edit by finding the cell in refreshed DOM
+        function checkPendingEdit() {
+            if (pendingEdit) {
+                const { fieldType, itemName, itemValue } = pendingEdit;
+                pendingEdit = null;
+
+                // Find the cell in the refreshed preview table
+                setTimeout(() => {
+                    const rows = document.querySelectorAll('#previewTableBody tr');
+                    for (const row of rows) {
+                        const cells = row.querySelectorAll('td');
+                        // Skip header rows (single cell spanning multiple columns)
+                        if (cells.length < 3) continue;
+
+                        // Find the name and value cells
+                        const deleteCheckbox = document.getElementById('enableDeleteButtons');
+                        const offset = (deleteCheckbox && deleteCheckbox.checked) ? 1 : 0;
+
+                        const nameCell = cells[offset + 1];
+                        const valueCell = cells[offset + 2];
+
+                        if (nameCell && nameCell.textContent.trim() === itemName) {
+                            const targetCell = fieldType === 'name' ? nameCell : valueCell;
+                            editCellInline(targetCell, fieldType, itemName, itemValue);
+                            break;
+                        }
+                    }
+                }, 50);
+            }
+        }
+
         // Delete a row from preview and update textarea
         function deleteRow(row) {
             // Get the item details from the row
             const cells = row.querySelectorAll('td');
 
-            // Determine if delete buttons are enabled based on number of cells
-            const hasDeleteButton = cells.length >= 4; // With delete button, we have 4 cells (delete, #, name, value)
+            // Check if delete button is enabled to determine column structure
+            const deleteCheckbox = document.getElementById('enableDeleteButtons');
+            const deleteEnabled = deleteCheckbox && deleteCheckbox.checked;
 
-            if (hasDeleteButton && cells.length >= 4) {
-                // With delete buttons enabled, the cells are: [delete, #, name, value]
-                const itemName = cells[2].textContent.trim();
-                const itemValue = cells[3].textContent.trim();
+            // Calculate offset: [delete?] # name value
+            let offset = deleteEnabled ? 1 : 0;
 
-                removeLineFromTextarea(itemName, itemValue);
-            } else if (!hasDeleteButton && cells.length >= 3) {
-                // Without delete buttons, the cells are: [#, name, value]
-                const itemName = cells[1].textContent.trim();
-                const itemValue = cells[2].textContent.trim();
+            if (cells.length >= 3 + offset) {
+                const itemName = cells[offset + 1].textContent.trim();
+                const itemValue = cells[offset + 2].textContent.trim();
 
                 removeLineFromTextarea(itemName, itemValue);
             }
@@ -975,6 +1315,45 @@
         // Helper function to escape special regex characters
         function escapeRegExp(string) {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Sort items alphabetically in the editor
+        function sortAlphabetically() {
+            const textarea = document.getElementById('editorTextarea');
+            if (!textarea) return;
+
+            let content = textarea.value.trim();
+            if (!content) return;
+
+            // Split content into lines
+            let lines = content.split('\n');
+
+            // Filter out empty lines
+            lines = lines.filter(line => line.trim() !== '');
+
+            // Parse each line to extract name and value
+            const items = [];
+            for (const line of lines) {
+                if (line.includes('-----')) {
+                    const parts = line.split('-----');
+                    const name = parts[0].trim();
+                    let value = parts[1] ? parts[1].trim() : '';
+                    // Remove trailing comma if present
+                    value = value.replace(/,$/, '');
+                    items.push({ name, value, original: line });
+                }
+            }
+
+            // Sort items by name alphabetically (case-insensitive)
+            items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
+
+            // Reconstruct the content
+            const sortedLines = items.map(item => `${item.name}----- ${item.value}`);
+            textarea.value = sortedLines.join('\n');
+
+            // Update preview and item count
+            updateItemCount();
+            updatePreview();
         }
     </script>
 </body>

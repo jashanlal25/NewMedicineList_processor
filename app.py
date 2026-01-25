@@ -243,6 +243,12 @@ def generate_html_from_template(data_items, template_path, list_no="000001", lis
     content = re.sub(r'<b>List No : </b>\s*\d+', f'<b>List No : </b>\n{list_no}', content)
     content = re.sub(r'<b>List Date </b> :\s*[\d/]+', f'<b>List Date </b> :\n{list_date}', content)
 
+    # Update global list number variable for PDF generator
+    content = re.sub(r'var LISTNO_GLOBAL = "[^"]*";', f'var LISTNO_GLOBAL = "{list_no}";', content)
+
+    # Update global WhatsApp number variable
+    content = re.sub(r'var WHATSAPP_GLOBAL = "[^"]*";', f'var WHATSAPP_GLOBAL = "{whatsapp_number}";', content)
+
     # 4. Update hidden inputs for rows count
     content = re.sub(r'id="rows" value="\d+"', f'id="rows" value="{total_count}"', content)
 

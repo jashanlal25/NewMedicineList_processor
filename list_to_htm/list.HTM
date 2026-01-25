@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=680" />
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <script>
+var LISTNO_GLOBAL = "000085";
+var WHATSAPP_GLOBAL = "923337068868";
 $(document).ready(function(){
   $("#myinputs").on("keyup", function() {
     var value = $(this).val().toLowerCase();
@@ -24,7 +26,7 @@ $(document).ready(function(){
             element.classList.remove("myoff");
              element.classList.add("myon"); 
         $('head meta[name=viewport]').remove();
- $('head').prepend('<meta name="viewport" content="user-scalable=0" />');
+ $('head').prepend('<meta name="viewport" content="width=680" />');
           }else{
             document.getElementById("onoff").value="Auto Zoom Off";
             var element = document.getElementById("onoff");
@@ -36,7 +38,6 @@ $(document).ready(function(){
         </script>
 <title>OFFER LIST</title>
 <style>
-body { padding: 20px 15px; margin: 0; }
 .login-box .user-box {  position: relative;}.login-box .user-box input:focus ~ label,.login-box .user-box input:valid ~ label {color: #ffffff;font-size: 12px;}
 .login-box {width: 95%;margin-left: -14px;padding: 20PX;background: #43576b;  box-sizing: border-box;  box-shadow: 0 15px 25px #d9e5e7;  border-radius: 10px;}
 .login-box form a {  position: relative;  display: inline-block;  padding: 10px 20px;  background-image: linear-gradient( rgb(55, 147, 251), 35%,  #1111ff );  color: #fafafc;
@@ -51,7 +52,7 @@ animation: btn-anim1 1s linear infinite;}@keyframes btn-anim1 {  0% {    left: -
 .invoice-box {max-width: 1050px;margin: 10px auto;padding: 20px;   border: 1px solid #eee;    box-shadow: 0 0 10px 2px #3e3ef8;    font-size: 16px; line-height: 24px; font-family: "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif; color: #555; }
 h1 {padding: 30px;}
 .invoice-box table {width: 100%;line-height: inherit;text-align: left;}
-.invoice-box table td {padding: 2px;vertical-align: top;}
+.invoice-box table td {padding: 2px;vertical-align: middle;}
 .invoice-box table tr.item td:nth-child(4), .invoice-box table tr.item td:nth-child(5) { padding: 0; white-space: nowrap; }
 .invoice-box table tr.item td:nth-child(2) { white-space: nowrap; }
 .invoice-box table tr td:nth-child(2) {text-align: right;}
@@ -66,13 +67,13 @@ background-image: linear-gradient( rgb(55, 147, 251), 35%,  #1111ff ); border-ra
 .invoice-box table tr.details td {padding-bottom: 20px;}.invoice-box table tr.item td {border-bottom: 1px solid #eee;font-weight: 600;
 font-family: Tahoma, "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;font-size: 22px; padding-top: 6px; padding-bottom: 6px;}
 .invoice-box table tr.item.last td {border-bottom: none;}
-.item {font-weight: 600;font-family: Tahoma, "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;font-size: 26px;
+.item {font-weight: 600;font-family: Tahoma, "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;font-size: 18px;
   color: #555;transition: color 0.4s;border: rgb(197, 103, 103) 2px solid;}
 .item:nth-child(even) {background-color:#Dff0ff;font-weight: 600;font-family: Tahoma, "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
-font-size: 26px;  color: #555;transition: color 0.4s;border: rgb(197, 103, 103) 2px solid;}
+font-size: 18px;  color: #555;transition: color 0.4s;border: rgb(197, 103, 103) 2px solid;}
 .item:hover {    background-image: linear-gradient( rgb(12,146,252), 75%,  rgb(5, 20, 223));   font-weight: 900; font-family: Tahoma, Helvetica
 Neue, Helvetica, Helvetica, Arial, sans-serif ;
-       font-size: 26px;  color: white; border: none; }
+       font-size: 18px;  color: white; border: none; }
 .invoice-box table tr.total td:nth-child(2) {border-top: 2px solid #eee;font-weight: bold;}
 @media only screen and (max-width: 480px) { .invoice-box table tr.top table td {width: 100%;display: block;text-align: center;}}
 .invoice-box table tr.information table td {width: 100%;display: block;text-align: center;}
@@ -88,7 +89,9 @@ color:#fff;background-color:#0a58ca;border-color:#0a53be}
 .invoice-box.rtl {direction: rtl;font-family: Tahoma, "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;}
 .invoice-box.rtl table {text-align: right;}.invoice-box.rtl table tr td:nth-child(2) {text-align: left;}.box{border:1px solid #3e3ef8;}
 .box{width: 400px; height: 1px;background-color: white; border-radius: 30px;display: flex; align-items: center; padding: 20px; border: 3px solid;
- font-weight: 300PX;} 
+ font-weight: 300PX;}
+.box h5 { width: 100%; display: flex; align-items: center; margin: 0; }
+.box #myinputs { flex: 1; width: auto !important; } 
 #cstname{width:60%;font: size 12px;font-family: Tahoma, "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;border:1px solid #3e3ef8;font-weight: 600px;
 border-radius:24px;text-align: left;COLOR: #2929b1c4;}
 #myinputs{border: none;    flex: 1;            font-weight: 300PX;        border: none;        outline: none;        font-size: 18px;        padding-left: 10px;}
@@ -132,7 +135,7 @@ input:checked + .slider {  background-color: #ccc;}input:checked + .slider:befor
   <tr class="top">    <td colspan="5"><table>    <tr>    <td style="font-size: 35px; text-align: center;"><h2 style="text-shadow: 10px 10px 20px #3e3ef8;">
 S.S.D PHARMA                            
 </h2>
-<h6 style="font-size: 20px;">
+<h6 style="font-size: 18px;">
      SHOP # C-140, MEZNINE FLOOR,       
 <BR>
   MEDICINE MARKAZ, DENSO HALL, KARACHI  
@@ -154,7 +157,7 @@ S.S.D PHARMA
 <td style="text-align: center; border-radius: 0px 16px 0px 0px;">Bonus</td></tr>
 <tr class="heading3"><td align="center" colspan="5">
 <center>
-<br><p class="onoff" style="font-size: 40PX;">Auto Zoom <label class="switch"><input type="checkbox" onclick="onoff();" id="onoff" value="Auto Zoom Off"><span class="slider"></span></label></p>
+<br><p class="onoff" style="font-size: 40PX;">Auto Zoom <label class="switch"><input type="checkbox" onclick="onoff();" id="onoff" value="Auto Zoom On"><span class="slider"></span></label></p>
 <h5>Products Search With Code, Name,  Discount%<br></h5><div class="box"><h5><i class="fa fa-search" aria-hidden="true"></i><input type="text" class="qty" id="myinputs" placeholder="Search here"></h5></div>
 </center>
 </td></Tr>
@@ -6739,9 +6742,9 @@ var MADD2 = "  MEDICINE MARKAZ, DENSO HALL, KARACHI  " ;
  
  mywindow.document.write('<h3 style="text-shadow: 10px 10px 20px #3e3ef8;">'+TITLETOTO+'</h3>');
  mywindow.document.write('</h2>');
- mywindow.document.write('<h6 style="font-size: 20px;">');
+ mywindow.document.write('<h6 style="font-size: 18px;">');
  mywindow.document.write('     SHOP # C-140, MEZNINE FLOOR,       ');
- mywindow.document.write('<h6 style="font-size: 20px;">');
+ mywindow.document.write('<h6 style="font-size: 18px;">');
  mywindow.document.write('  MEDICINE MARKAZ, DENSO HALL, KARACHI  ');
  mywindow.document.write('<tr><td colspan="5" align="center" style=" background: rgb(12,146,252); background: radial-gradient(circle, rgba(12,146,252,1) 50%, rgba(255,255,255,1) 100%); color:white;" ><b>');
  mywindow.document.write('List Order');
@@ -19850,7 +19853,7 @@ var serial = (serial+1);
  var text=text+"|"+ITMCODE384+"%20|%20"+namevar384+"%20|%20"+ITMNAME384+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a"+"%0a*Total* *Items* : "+serial;
 }
 
-var url="https://wa.me/923337068868?text="
+var url="https://wa.me/" + WHATSAPP_GLOBAL + "?text="
  +"*Name* :"+custname+"%0a*List no* :"+LSTNO+"%0a--------------------%0a%0a"
  +text+"%0a*Total* *Items* : "+serial;
 window.open(url,'_blank').focus();
@@ -22182,9 +22185,9 @@ var MADD2 = "  MEDICINE MARKAZ, DENSO HALL, KARACHI  " ;
  
  myWindow.document.write('<h3 style="text-shadow: 10px 10px 20px #3e3ef8;">'+TITLETOTO+'</h3>');
  myWindow.document.write('</h2>');
- myWindow.document.write('<h6 style="font-size: 20px;">');
+ myWindow.document.write('<h6 style="font-size: 18px;">');
  myWindow.document.write('     SHOP # C-140, MEZNINE FLOOR,       ');
- myWindow.document.write('<h6 style="font-size: 20px;">');
+ myWindow.document.write('<h6 style="font-size: 18px;">');
  myWindow.document.write('  MEDICINE MARKAZ, DENSO HALL, KARACHI  ');
  myWindow.document.write('<tr><td colspan="8" align="center" style=" background: rgb(12,146,252); background: radial-gradient(circle, rgba(12,146,252,1) 50%, rgba(255,255,255,1) 100%); color:white;" ><b>');
  myWindow.document.write('List Order');
@@ -28762,7 +28765,7 @@ var serial = (serial+1);
  myWindow.document.write('        } else {');
  myWindow.document.write('          status.innerHTML = "Share not supported, downloading...";');
  myWindow.document.write('          var link = document.createElement("a"); link.download = "order.png"; link.href = canvas.toDataURL(); link.click();');
- myWindow.document.write('          setTimeout(function() { window.open("https://wa.me/923337068868", "_blank"); }, 500);');
+ myWindow.document.write('          setTimeout(function() { window.open("https://wa.me/' + WHATSAPP_GLOBAL + '", "_blank"); }, 500);');
  myWindow.document.write('          resetBtn();');
  myWindow.document.write('        }');
  myWindow.document.write('      } catch(e) { status.innerHTML = "Error: " + e.message; resetBtn(); }');
@@ -34570,8 +34573,9 @@ function generatePDF() {
   const sectionWidth = (printWidht - (sections - 1) * spacing) / sections;
 var custname = document.getElementById("cstname").value;
 var title = "S.S.D PHARMA" ;
-var idate = " 21/01/2026";
-var lstno = "000085";
+var today = new Date();
+var idate = " " + today.getDate().toString().padStart(2, '0') + '/' + (today.getMonth() + 1).toString().padStart(2, '0') + '/' + today.getFullYear();
+var lstno = LISTNO_GLOBAL;
 doc.addPage();
 doc.text(" ", 20, 10)
 doc.text(title, 80,10)
@@ -34618,7 +34622,9 @@ doc.save('MYORDER000085.pdf');
 }
 
 function simpleOrder() {
-  var orderText = "Date: 23/01/2026\n Order from :\n ";
+  var today = new Date();
+  var dateStr = today.getDate().toString().padStart(2, '0') + '/' + (today.getMonth() + 1).toString().padStart(2, '0') + '/' + today.getFullYear();
+  var orderText = "Date: " + dateStr + "\n Order from :\n ";
   var hasItems = false;
 
   // Loop through all items and add those with quantities
@@ -34678,7 +34684,7 @@ function simpleOrder() {
   var encodedText = encodeURIComponent(orderText);
 
   // Open WhatsApp with the order
-  var whatsappUrl = "https://api.whatsapp.com/send/?phone=%2B923337068868&text=" + encodedText + "&type=phone_number&app_absent=0";
+  var whatsappUrl = "https://api.whatsapp.com/send/?phone=%2B" + WHATSAPP_GLOBAL + "&text=" + encodedText + "&type=phone_number&app_absent=0";
 
   // Open the WhatsApp URL in a new tab/window
   window.open(whatsappUrl, '_blank');
