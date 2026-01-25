@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Medicine List Processor",
   "short_name": "MedList",
   "description": "Process medicine lists and manage discounts",
@@ -10,12 +11,8 @@
     {
       "src": "/static/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "share_target": {
