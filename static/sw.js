@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medlist-v5';
+const CACHE_NAME = 'medlist-v6';
 const urlsToCache = [
   '/',
   '/static/manifest.json'
