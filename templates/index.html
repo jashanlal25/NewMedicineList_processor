@@ -2300,8 +2300,7 @@
                     const parts = line.split('-----');
                     const name = parts[0].trim();
                     let value = parts[1] ? parts[1].trim() : '';
-                    // Remove trailing comma if present
-                    value = value.replace(/,$/, '');
+                    // Preserve the value with any separator (comma, etc.)
                     items.push({ name, value });
                 }
             }
