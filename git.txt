@@ -34,3 +34,19 @@ To deploy to Vercel:
   Want me to help you set up the GitHub repo?
 
 ✻ Baked for 45s                           
+
+
+ Use this simpler command instead:
+
+  # Stage all modified files
+  git add .
+
+  # Commit
+  git commit -m "Add / separator for bonus values in discount parsing"
+
+  # Push
+  git push origin main
+
+  Or single line:
+
+  git add . && git commit -m "Add / separator for bonus values in discount parsing" && git push origin main

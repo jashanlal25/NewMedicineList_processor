@@ -26,7 +26,7 @@
       "files": [
         {
           "name": "file",
-          "accept": ["text/*", ".htm", ".html", ".txt"]
+          "accept": ["text/*", "application/octet-stream", "*/*", ".htm", ".html", ".txt"]
         }
       ]
     }
