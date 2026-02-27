@@ -1082,6 +1082,25 @@ Imidol tab (1)" rows="10"></textarea>
             }
         });
 
+        // Swipe right to close side panel
+        (function() {
+            const sidePanel = document.getElementById('sidePanel');
+            let touchStartX = 0;
+
+            sidePanel.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+
+            sidePanel.addEventListener('touchend', function(e) {
+                const deltaX = e.changedTouches[0].clientX - touchStartX;
+                if (deltaX > 60) {
+                    sidePanel.classList.remove('open');
+                    const container = document.querySelector('.container');
+                    if (container) container.classList.remove('side-panel-open');
+                }
+            }, { passive: true });
+        })();
+
         // Bulk search buttons for both options
         document.getElementById('bulkSearchBtn1').addEventListener('click', function() {
             const bulkInput = document.getElementById('bulkSearchInput1').value.trim();
