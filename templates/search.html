@@ -357,6 +357,33 @@
             color: var(--text-primary);
         }
 
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .label-row label {
+            margin-bottom: 0;
+        }
+
+        .clear-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .clear-btn:hover {
+            background: rgba(255, 80, 80, 0.1);
+            border-color: #ff5050;
+            color: #ff5050;
+        }
+
         .form-group input[type="text"],
         .form-group input[type="file"] {
             width: 100%;
@@ -848,7 +875,10 @@
 
             <!-- Expandable Bulk Search Section -->
             <div id="bulkSearchSection" class="form-group hidden bulk-section">
-                <label for="bulkSearchInput1">Paste your medicine list (one per line):</label>
+                <div class="label-row">
+                    <label for="bulkSearchInput1">Paste your medicine list (one per line):</label>
+                    <button class="clear-btn" onclick="document.getElementById('bulkSearchInput1').value=''">✕ Clear</button>
+                </div>
                 <textarea id="bulkSearchInput1" placeholder="Paste your medicine list here, one per line:
 Cran max sachet (3)
 Levopraid 50 (1)
@@ -889,7 +919,10 @@ Imidol tab (1)" rows="8"></textarea>
         <div class="side-panel-content">
             <div class="bulk-search-section">
                 <div class="form-group">
-                    <label for="bulkSearchInput2">Paste your medicine list (one per line):</label>
+                    <div class="label-row">
+                        <label for="bulkSearchInput2">Paste your medicine list (one per line):</label>
+                        <button class="clear-btn" onclick="document.getElementById('bulkSearchInput2').value=''">✕ Clear</button>
+                    </div>
                     <textarea id="bulkSearchInput2" placeholder="Paste your medicine list here, one per line:
 Cran max sachet (3)
 Levopraid 50 (1)
