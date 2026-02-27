@@ -23,6 +23,13 @@ except ImportError as e:
     print(f"Error importing search_medicines: {e}")
     MedicineSearcher = None
 
+def decompress_if_needed(data):
+    """Auto-detect and decompress gzip data, return original bytes if not compressed."""
+    try:
+        return gzip_module.decompress(data)
+    except (OSError, Exception):
+        return data
+
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.secret_key = 'medicinesearch_supersecret_key'  # Needed for sessions
@@ -456,6 +463,7 @@ def search_page():
 import atexit
 import shutil
 import tempfile
+import gzip as gzip_module
 
 # Global instance to store uploaded files
 uploaded_files_storage = {}
@@ -500,7 +508,9 @@ def upload_lists():
         os.makedirs(upload_dir, exist_ok=True)
         filepath = os.path.join(upload_dir, filename)
 
-        file.save(filepath)
+        file_data = decompress_if_needed(file.read())
+        with open(filepath, 'wb') as f:
+            f.write(file_data)
         file_paths.append(filepath)
 
     # Store the file paths for this session - append to existing files instead of replacing

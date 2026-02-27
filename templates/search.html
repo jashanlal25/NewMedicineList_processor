@@ -1118,6 +1118,16 @@ Imidol tab (1)" rows="10"></textarea>
             }
         });
 
+        async function compressFile(file) {
+            if (!window.CompressionStream || file.size < 100 * 1024) return file;
+            try {
+                const stream = file.stream().pipeThrough(new CompressionStream('gzip'));
+                const blob = await new Response(stream).blob();
+                if (blob.size >= file.size) return file;
+                return new File([blob], file.name, { type: file.type });
+            } catch (e) { return file; }
+        }
+
         async function uploadFiles() {
             const fileInput = document.getElementById('files');
             const files = fileInput.files;
@@ -1127,14 +1137,17 @@ Imidol tab (1)" rows="10"></textarea>
                 return;
             }
 
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('files', files[i]);
-            }
-            formData.append('session_id', sessionId);
-
             try {
                 document.getElementById('uploadBtn').disabled = true;
+                document.getElementById('uploadBtn').textContent = 'Compressing...';
+
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    const uploadFile = await compressFile(files[i]);
+                    formData.append('files', uploadFile, files[i].name);
+                }
+                formData.append('session_id', sessionId);
+
                 document.getElementById('uploadBtn').textContent = 'Uploading...';
 
                 const response = await fetch('/upload-lists', {
