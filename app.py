@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, send_file, jsonify, redirect
+from flask import Flask, render_template, request, send_file, jsonify, redirect, session
 from bs4 import BeautifulSoup
 import os
 import io
 import re
 import sys
+import json
 
 # Add list_to_htm to path for importing update_htm functions
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'list_to_htm'))
@@ -14,8 +15,17 @@ from update_htm import (
     update_htm
 )
 
+# Import the search functionality
+sys.path.insert(0, os.path.dirname(__file__))
+try:
+    from search_medicines import MedicineSearcher
+except ImportError as e:
+    print(f"Error importing search_medicines: {e}")
+    MedicineSearcher = None
+
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.secret_key = 'medicinesearch_supersecret_key'  # Needed for sessions
 
 # Store processed results temporarily
 processed_results = {}
@@ -437,6 +447,109 @@ def preview_html():
     data = processed_results['html_latest']
     return data['content']
 
+# ============ SEARCH MEDICINES FUNCTIONALITY ============
+
+@app.route('/search')
+def search_page():
+    return render_template('search.html')
+
+import atexit
+import shutil
+
+# Global instance to store uploaded files
+uploaded_files_storage = {}
+
+def cleanup_uploads():
+    """Clean up uploaded files when the application stops"""
+    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+    if os.path.exists(upload_dir):
+        # Clean all files in the uploads directory
+        for filename in os.listdir(upload_dir):
+            file_path = os.path.join(upload_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f'Failed to delete {file_path}. Reason: {e}')
+
+# Register cleanup function to run on exit
+atexit.register(cleanup_uploads)
+
+@app.route('/upload-lists', methods=['POST'])
+def upload_lists():
+    if 'files' not in request.files:
+        return jsonify({'error': 'No files uploaded'}), 400
+
+    files = request.files.getlist('files')
+    file_paths = []
+
+    for file in files:
+        if file.filename == '':
+            continue
+
+        # Check file extension
+        if not file.filename.lower().endswith(('.htm', '.html', '.txt', '.text', '.pdf')):
+            continue
+
+        # Save the file temporarily
+        filename = file.filename
+        upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, filename)
+
+        file.save(filepath)
+        file_paths.append(filepath)
+
+    # Store the file paths for this session - append to existing files instead of replacing
+    session_id = request.form.get('session_id', 'default')
+
+    # Initialize the session if it doesn't exist
+    if session_id not in uploaded_files_storage:
+        uploaded_files_storage[session_id] = []
+
+    # Append new files to existing ones
+    uploaded_files_storage[session_id].extend(file_paths)
+
+    # Return total number of files for this session
+    total_files_for_session = len(uploaded_files_storage[session_id])
+    return jsonify({
+        'success': True,
+        'message': f'Uploaded {len(file_paths)} files, total files in session: {total_files_for_session}',
+        'file_paths': uploaded_files_storage[session_id],  # Return all files in the session
+        'session_id': session_id
+    })
+
+@app.route('/search-medicines', methods=['POST'])
+def search_medicines():
+    data = request.get_json()
+    search_terms = data.get('search_terms', [])
+    session_id = data.get('session_id', 'default')
+
+    if not search_terms:
+        return jsonify({'error': 'No search terms provided'}), 400
+
+    # Get file paths for this session
+    file_paths = uploaded_files_storage.get(session_id, [])
+    if not file_paths:
+        return jsonify({'error': 'No files uploaded for this session'}), 400
+
+    # Check if MedicineSearcher is available
+    if MedicineSearcher is None:
+        return jsonify({'error': 'Search functionality not available, unable to import required modules'}), 500
+
+    # Perform the search
+    searcher = MedicineSearcher()
+    results = searcher.search_medicines(file_paths, search_terms)
+
+    return jsonify({
+        'success': True,
+        'results': results,
+        'total_files': len(file_paths),
+        'total_matches': sum(len(result['matches']) for result in results)
+    })
+
 if __name__ == '__main__':
     # host='0.0.0.0' allows access from other devices on same network
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
