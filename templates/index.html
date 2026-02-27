@@ -938,10 +938,16 @@
         @media screen and (max-width: 768px) {
 
             .nav-header {
+                display: flex;
+                justify-content: space-between;
                 padding: 0 15px;
             }
 
             .nav-links {
+                display: none;
+            }
+
+            .top-buttons {
                 display: none;
             }
 
@@ -960,16 +966,6 @@
 
             .nav-header .mobile-menu-btn {
                 display: flex !important;
-            }
-
-            .install-btn-placeholder {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 50px;
-                height: 28px;
-                visibility: hidden;
-                flex-shrink: 0;
             }
 
             .install-btn {
@@ -1818,6 +1814,13 @@
                     method: 'POST',
                     body: formData
                 });
+
+                if (!response.ok) {
+                    if (response.status === 413) {
+                        throw new Error('File too large. Please upload a smaller file (max 4MB on free hosting).');
+                    }
+                    throw new Error(`Server error (${response.status}). Please try again.`);
+                }
 
                 const data = await response.json();
                 loading.classList.remove('show');

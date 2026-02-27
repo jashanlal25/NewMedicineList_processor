@@ -455,13 +455,14 @@ def search_page():
 
 import atexit
 import shutil
+import tempfile
 
 # Global instance to store uploaded files
 uploaded_files_storage = {}
 
 def cleanup_uploads():
     """Clean up uploaded files when the application stops"""
-    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+    upload_dir = os.path.join(tempfile.gettempdir(), 'medicine_uploads')
     if os.path.exists(upload_dir):
         # Clean all files in the uploads directory
         for filename in os.listdir(upload_dir):
@@ -493,9 +494,9 @@ def upload_lists():
         if not file.filename.lower().endswith(('.htm', '.html', '.txt', '.text', '.pdf')):
             continue
 
-        # Save the file temporarily
+        # Save the file temporarily to writable temp directory (/tmp on Vercel)
         filename = file.filename
-        upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+        upload_dir = os.path.join(tempfile.gettempdir(), 'medicine_uploads')
         os.makedirs(upload_dir, exist_ok=True)
         filepath = os.path.join(upload_dir, filename)
 
