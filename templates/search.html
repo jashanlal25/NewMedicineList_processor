@@ -1278,7 +1278,12 @@ Imidol tab (1)" rows="10"></textarea>
                 const result = await response.json();
 
                 if (result.success) {
-                    displayResults(result.results, result.total_matches, isSidePanel); // true for side panel
+                    displayResults(result.results, result.total_matches, isSidePanel);
+                } else if (result.expired) {
+                    uploadedFiles = [];
+                    document.getElementById('fileItems').innerHTML = '';
+                    document.getElementById('filesSection').style.display = 'none';
+                    alert('⏱ Session expired (5 min limit). Please upload your files again.');
                 } else {
                     alert('Search failed: ' + result.error);
                 }

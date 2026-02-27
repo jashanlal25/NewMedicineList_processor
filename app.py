@@ -464,9 +464,19 @@ import atexit
 import shutil
 import tempfile
 import gzip as gzip_module
+import time
 
-# Global instance to store uploaded files
+SESSION_TTL = 300  # 5 minutes in seconds
+
+# Global instance to store uploaded files: {session_id: {'files': [...], 'expires_at': timestamp}}
 uploaded_files_storage = {}
+
+def purge_expired_sessions():
+    """Remove sessions that have passed their 5-minute TTL."""
+    now = time.time()
+    expired = [sid for sid, data in uploaded_files_storage.items() if data['expires_at'] < now]
+    for sid in expired:
+        del uploaded_files_storage[sid]
 
 def cleanup_uploads():
     """Clean up uploaded files when the application stops"""
@@ -513,23 +523,25 @@ def upload_lists():
             f.write(file_data)
         file_paths.append(filepath)
 
-    # Store the file paths for this session - append to existing files instead of replacing
     session_id = request.form.get('session_id', 'default')
 
-    # Initialize the session if it doesn't exist
+    # Clean up expired sessions on each upload
+    purge_expired_sessions()
+
+    # Initialize or refresh the session with a fresh 5-minute TTL
     if session_id not in uploaded_files_storage:
-        uploaded_files_storage[session_id] = []
+        uploaded_files_storage[session_id] = {'files': [], 'expires_at': 0}
 
-    # Append new files to existing ones
-    uploaded_files_storage[session_id].extend(file_paths)
+    uploaded_files_storage[session_id]['files'].extend(file_paths)
+    uploaded_files_storage[session_id]['expires_at'] = time.time() + SESSION_TTL
 
-    # Return total number of files for this session
-    total_files_for_session = len(uploaded_files_storage[session_id])
+    total_files_for_session = len(uploaded_files_storage[session_id]['files'])
     return jsonify({
         'success': True,
         'message': f'Uploaded {len(file_paths)} files, total files in session: {total_files_for_session}',
-        'file_paths': uploaded_files_storage[session_id],  # Return all files in the session
-        'session_id': session_id
+        'file_paths': uploaded_files_storage[session_id]['files'],
+        'session_id': session_id,
+        'expires_in': SESSION_TTL
     })
 
 @app.route('/search-medicines', methods=['POST'])
@@ -541,8 +553,14 @@ def search_medicines():
     if not search_terms:
         return jsonify({'error': 'No search terms provided'}), 400
 
-    # Get file paths for this session
-    file_paths = uploaded_files_storage.get(session_id, [])
+    # Get file paths for this session, checking expiry
+    session_data = uploaded_files_storage.get(session_id)
+    if not session_data:
+        return jsonify({'error': 'Session expired or no files uploaded. Please upload your files again.', 'expired': True}), 400
+    if time.time() > session_data['expires_at']:
+        del uploaded_files_storage[session_id]
+        return jsonify({'error': 'Session expired (5 min limit). Please upload your files again.', 'expired': True}), 400
+    file_paths = session_data['files']
     if not file_paths:
         return jsonify({'error': 'No files uploaded for this session'}), 400
 
