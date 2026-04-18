@@ -1524,11 +1524,14 @@
             const originalValue = fieldType === 'name' ? itemName : itemValue;
 
             // Create editable input using CSS class
-            cell.innerHTML = `<input type="text" class="inline-edit-input" value="${escapeHtml(originalValue)}">`;
+            cell.innerHTML = `<input type="text" class="inline-edit-input" autocapitalize="none" autocorrect="off" spellcheck="false" value="${escapeHtml(originalValue)}">`;
 
             const input = cell.querySelector('input');
+            // Stop clicks inside the input from bubbling to the cell's onclick
+            input.addEventListener('click', e => e.stopPropagation());
             input.focus();
-            input.select();
+            // Place cursor at end so existing text can be edited
+            input.setSelectionRange(input.value.length, input.value.length);
 
             // Only scroll if input is truly not visible (more conservative approach)
             setTimeout(() => {
