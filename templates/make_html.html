@@ -710,6 +710,7 @@
             border-radius: 6px !important;
             font-size: 14px !important;
             background: #fff !important;
+            color: #111 !important;
             box-sizing: border-box !important;
             margin: -4px 0;
         }
@@ -816,6 +817,7 @@
                 min-width: 80px !important;
                 padding: 8px 10px !important;
                 font-size: 15px !important;
+                color: #111 !important;
                 border-radius: 5px !important;
                 margin: -2px 0 !important;
             }
@@ -1524,25 +1526,39 @@
             const originalValue = fieldType === 'name' ? itemName : itemValue;
 
             // Create editable input using CSS class
-            cell.innerHTML = `<input type="text" class="inline-edit-input" autocapitalize="none" autocorrect="off" spellcheck="false" value="${escapeHtml(originalValue)}">`;
+            const nameAttrs = fieldType === 'name' ? ' autocapitalize="none" autocorrect="off" spellcheck="false"' : '';
+            cell.innerHTML = `<input type="text" class="inline-edit-input"${nameAttrs} value="${escapeHtml(originalValue)}">`;
 
             const input = cell.querySelector('input');
-            // Stop clicks inside the input from bubbling to the cell's onclick
-            input.addEventListener('click', e => e.stopPropagation());
-            input.focus();
-            // Place cursor at end so existing text can be edited
-            input.setSelectionRange(input.value.length, input.value.length);
+            if (fieldType === 'name') {
+                // Stop clicks inside the input from bubbling to the cell's onclick
+                input.addEventListener('click', e => e.stopPropagation());
+                input.focus({ preventScroll: true });
+                input.setSelectionRange(input.value.length, input.value.length);
+            } else {
+                input.focus({ preventScroll: true });
+                input.select();
+            }
 
-            // Only scroll if input is truly not visible (more conservative approach)
-            setTimeout(() => {
+            // Scroll main page so input stays visible above keyboard (inner container holds position)
+            const scrollInputIntoView = () => {
+                const vv = window.visualViewport;
+                const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
                 const rect = input.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-
-                // Only scroll if input is completely off-screen or mostly hidden
-                if (rect.bottom < 0 || rect.top > windowHeight - 50) {
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (rect.bottom > visibleBottom - 20) {
+                    window.scrollBy({ top: rect.bottom - (visibleBottom - 20), behavior: 'smooth' });
                 }
-            }, 100);
+            };
+
+            setTimeout(scrollInputIntoView, 100);
+
+            if (window.visualViewport) {
+                const onKeyboardOpen = () => {
+                    scrollInputIntoView();
+                    window.visualViewport.removeEventListener('resize', onKeyboardOpen);
+                };
+                window.visualViewport.addEventListener('resize', onKeyboardOpen);
+            }
 
             // Save on Enter, cancel on Escape
             input.addEventListener('keydown', function(e) {
