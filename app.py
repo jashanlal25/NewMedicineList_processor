@@ -424,6 +424,9 @@ def generate_html():
     list_date = request.form.get('list_date', None)
     title = request.form.get('title', 'S.S.D PHARMA')
     whatsapp_number = request.form.get('whatsapp_number', '923337068868')
+    list_type = request.form.get('list_type', 'M')
+    if list_type not in ('M', 'C'):
+        list_type = 'M'
     # Remove any non-digit characters from WhatsApp number
     whatsapp_number = ''.join(filter(str.isdigit, whatsapp_number))
 
@@ -452,7 +455,7 @@ def generate_html():
         return jsonify({'error': error}), 500
 
     # Store for download
-    output_filename = f"offer_list_{list_no}.htm"
+    output_filename = f"offer_list_{list_type}{list_no}.htm"
     processed_results['html_latest'] = {
         'content': html_content,
         'filename': output_filename,
