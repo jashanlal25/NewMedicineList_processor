@@ -30,7 +30,7 @@ def decompress_if_needed(data):
     except (OSError, Exception):
         return data
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
+app = Flask(__name__, static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'), static_url_path='/static')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.secret_key = 'medicinesearch_supersecret_key'  # Needed for sessions
 
