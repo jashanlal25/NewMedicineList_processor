@@ -470,6 +470,135 @@ var serial = (serial+1);
 '''
     return js_blocks
 
+def _parse_disc_to_num(value):
+    """Pull a numeric percent out of a string like '7.00%' or '7%' or '7'. Returns 0.0 if none."""
+    if not value:
+        return 0.0
+    cleaned = value.strip()
+    if '%' in cleaned:
+        cleaned = cleaned.split('%')[0].strip()
+    # Drop everything after first non-numeric (allows '0' from 'TP', 'NET', etc.)
+    out = ""
+    for ch in cleaned:
+        if ch.isdigit() or ch == '.':
+            out += ch
+        else:
+            break
+    try:
+        return float(out) if out else 0.0
+    except ValueError:
+        return 0.0
+
+def _new_format_item_row(serial, code, name, disc_num, bonus, tp, tax, list_no="", disc_raw=""):
+    """Render one <tr class="item-row"> for the new format."""
+    code_disp = (code or str(serial)).strip()
+    data_id = f"{code_disp}-{list_no}-{serial}"
+    disc_str = f"{disc_num:.2f}"
+    # Show the original value string (e.g. "14.00%,") if available, else fall back to formatted number
+    disc_disp = disc_raw.strip() if disc_raw and disc_raw.strip() else f"{disc_str}%"
+    tp_str = f"{float(tp):.2f}" if tp else "0.00"
+    tax_str = f"{float(tax):.2f}" if tax else "0.00"
+    bonus_attr = (bonus or "").strip()
+    name_disp = name.strip()
+
+    return (
+        f'<tr class="item-row" data-id="{data_id}" data-tp="{tp_str}" '
+        f'data-disc="{disc_str}" data-bonus="{bonus_attr}" data-tax="{tax_str}">'
+        f'<td class="first-col"> {code_disp} </td>'
+        f'<td class="cell-name">{name_disp}</td>'
+        f'<td><div class="qty-wrap"><input class="qty-input" type="number" min="0" max="5000" '
+        f'step="1" placeholder="0" inputmode="numeric"></div></td>'
+        f'<td class="num">{disc_disp}</td>'
+        f'<td>{bonus_attr}</td>'
+        f'<td class="num">{tp_str}</td>'
+        f'<td align="center">{tax_str}</td>'
+        f'</tr>\n'
+    )
+
+def _new_format_letter_header(letter):
+    """Section header row for the new format (alphabet letter, styled like company-head)."""
+    return f'<tr class="company-head"><td colspan="7">{letter}</td></tr>\n'
+
+def generate_html_new_format(template_path, items_extended, list_no="000001",
+                             list_date=None, title="ANAS SYSTEM", whatsapp_number="923337068868"):
+    """Generate a new-format HTML offer list.
+
+    items_extended: list of dicts with keys name, value, code, tp, bonus, tax.
+    Sorts alphabetically by name and emits A/B/C section headers (per user request:
+    "company doesn't matter, alphabetic order").
+    """
+    import datetime
+    if list_date is None:
+        list_date = datetime.datetime.now().strftime("%d/%m/%Y")
+
+    with open(template_path, 'r', encoding='utf-8', newline='') as f:
+        content = f.read()
+
+    # Sort by uppercase name for stable alphabetic grouping.
+    sorted_items = sorted(items_extended, key=lambda d: (d.get('name') or "").upper())
+
+    items_html = ""
+    current_letter = ""
+    for i, it in enumerate(sorted_items, 1):
+        name = it.get('name') or ""
+        first_letter = name[0].upper() if name else "?"
+        if first_letter != current_letter:
+            current_letter = first_letter
+            items_html += _new_format_letter_header(current_letter)
+        disc_raw = it.get('value') or ""
+        disc_num = _parse_disc_to_num(disc_raw)
+        items_html += _new_format_item_row(
+            serial=i,
+            code=it.get('code') or str(i),
+            name=name,
+            disc_num=disc_num,
+            disc_raw=disc_raw,
+            bonus=it.get('bonus') or "",
+            tp=it.get('tp') or "",
+            tax=it.get('tax') or "0.00",
+            list_no=list_no,
+        )
+
+    # Insert items into the placeholder.
+    if "<!--ITEMS_PLACEHOLDER-->" in content:
+        content = content.replace("<!--ITEMS_PLACEHOLDER-->", items_html, 1)
+    else:
+        return None, "ERROR: Template missing <!--ITEMS_PLACEHOLDER-->"
+
+    # Replace the sample list-no in all three places. The header meta has stray
+    # CR characters between fields, so use regex with [\s] tolerant matching.
+    # 1) Header: "<b>List No : </b>{listno}<b>Date :{date}</div>"
+    content = re.sub(
+        r'(<b>List No : </b>)\s*000032\s*(<b>Date :)\s*12/04/2026',
+        lambda m: f'{m.group(1)}{list_no}{m.group(2)}{list_date}',
+        content,
+    )
+    # 2) JS OFFLINE_META.offerId
+    content = content.replace('offerId: "000032"', f'offerId: "{list_no}"')
+    # 3) buildWaMessage hard-coded "*List No* : 000032\n"
+    content = content.replace('*List No* : 000032\\n', f'*List No* : {list_no}\\n')
+
+    # Browser tab title
+    content = content.replace(
+        'ANAS SYSTEM  Offline Offer List',
+        f'{title} Offer List' if title.strip() else 'Offline Offer List'
+    )
+
+    # Shop title — <h1> and OFFLINE_META.shopTitle (space-padded placeholder)
+    for placeholder in ('ZIDANE MEDICO                           ',
+                        'SSD MEDICO                           ',
+                        'SSD MEDICOS                          '):
+        if placeholder in content:
+            content = content.replace(placeholder, title)
+
+    # Footer company name — show title or leave blank
+    content = content.replace('<strong>SSD MEDICOS</strong>', f'<strong>{title}</strong>' if title.strip() else '')
+
+    # WhatsApp number — both the hidden input and the JS fallback use the same string.
+    content = content.replace('+03112127664 ', whatsapp_number)
+
+    return content, None
+
 def update_htm(htm_filepath, data_items, output_filepath):
     """Update list.HTM with all items from data.txt"""
     with open(htm_filepath, 'r', encoding='utf-8') as f:

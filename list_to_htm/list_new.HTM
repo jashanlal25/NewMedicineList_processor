@@ -1,0 +1,1167 @@
+
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <title>ANAS SYSTEM  Offline Offer List</title>
+
+<style>
+:root{
+  --panel:rgba(13,18,40,.60);
+  --panelSolid:#101b37;
+  --text:#eaf3ff;
+  --muted:#b9c7e6;
+  --textSolid:#eaf3ff;
+  --border:rgba(255,255,255,.12);
+  --chip:#121a2b;
+  --btn:#1a2540;
+  --thead:#0e1730;
+  --theadText:#cfe3ff;
+  --accent:#2dd4bf;
+  --grad1:#1e3a8a;
+  --grad2:#2563eb;
+  --bg1:#1e1552;
+  --bg2:#2c1691;
+  --bg3:#3f66d1;
+  --bg4:#4ea3ff;
+
+  /* ? viewport fix helper */
+  --vh: 1vh;
+}
+
+[data-theme="light"]{
+  --panel:rgba(255,255,255,.95);
+  --panelSolid:#fff;
+  --text:#0b1220;
+  --muted:#55617a;
+  --textSolid:#0b1220;
+  --border:rgba(8,20,60,.16);
+  --chip:#f3f6ff;
+  --btn:#eaf0ff;
+  --thead:#f7f9ff;
+  --theadText:#5d6e90;
+  --accent:#0ea5e9;
+  --grad1:#08124A;
+  --grad2:#1A2FA0;
+  --bg1:#f3f6ff;
+  --bg2:#edf2ff;
+  --bg3:#e9efff;
+  --bg4:#e6ecff;
+}
+
+*, *::before, *::after{ box-sizing:border-box; }
+
+html, body{ width:100%; }
+html{ -webkit-text-size-adjust:100%; height:100%; }
+
+body{
+  margin:0;
+  font-family:'Segoe UI',Roboto,Arial,system-ui,sans-serif;
+  color:var(--text);
+
+  overflow-x:hidden;
+  overflow-y:auto; /* ? scroll enable */
+
+  /* ? orientation / address bar safe height */
+  min-height: calc(var(--vh) * 100);
+  min-height: 100svh;
+  min-height: 100dvh;
+
+  /* ? heavy repaint fix: remove "fixed" */
+background: linear-gradient(135deg,var(--bg1) 0%, var(--bg2) 35%, var(--bg3) 65%, var(--bg4) 100%);
+background-attachment: fixed;
+background-repeat: no-repeat;
+background-size: cover;
+-webkit-font-smoothing: antialiased;
+text-rendering: optimizeLegibility;
+}
+
+/* wrapper */
+.wrap{
+  width:100%;
+  max-width:1100px;
+  margin:0 auto;
+  padding:16px 12px;
+}
+
+/* main card */
+.card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:18px;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow:0 18px 40px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08);
+  overflow:hidden;
+
+  display:flex;
+  flex-direction:column;
+}
+
+/* header */
+.head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:14px;
+  border-bottom:1px solid var(--border);
+}
+.meta{ color:var(--muted); font-size:12px; }
+
+.btn,
+.theme-toggle{
+  border:1px solid var(--border);
+  background:var(--btn);
+  color:var(--text);
+  border-radius:12px;
+  padding:8px 12px;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+}
+
+/* shop */
+.shopbox{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+.shopname{
+  margin:0 0 6px;
+  font-weight:900;
+  font-size:28px;
+  letter-spacing:.4px;
+  color:#cfe3ff;
+}
+[data-theme="light"] .shopname{ color:#0A1866; }
+.addr{ color:var(--muted); font-size:.95rem; }
+
+/* chips */
+.info{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+}
+.tag{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--chip);
+  color:var(--text);
+  font-size:12px;
+}
+
+.controls{ display:block; margin:12px 0; padding:0 16px; }
+.row{ padding:0 clamp(12px, 6vw, 100px); }
+
+/* promo video card */
+.promo-video{
+  margin:16px auto 24px;
+  max-width:1100px;
+  padding:16px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:18px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:0 18px 40px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.promo-video .pv-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+.pv-title{
+  margin:0;
+  font-weight:900;
+  letter-spacing:.2px;
+  color:var(--text);
+  font-size:20px;
+}
+.pv-frame{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9.3;
+  background:#000;
+  border-radius:14px;
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+.pv-frame::before{
+  content:"";
+  position:absolute; inset:-1px;
+  border-radius:14px;
+  pointer-events:none;
+  background:linear-gradient(135deg, var(--grad1), var(--grad2));
+  opacity:.15;
+  -webkit-mask:linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+}
+.pv-frame iframe{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  border:0;
+  background:#000;
+}
+
+/* inputs */
+input[type=text],input[type=number]{
+  width:100%;
+  padding:11px 12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--chip);
+  color:var(--text);
+  outline:none;
+}
+input:focus{
+  box-shadow:0 0 0 2px rgba(14,165,233,.18);
+  border-color:var(--accent);
+}
+
+/* search */
+.search-box{ position:relative; width:100%; max-width:560px; margin:0 auto; }
+.search-box i{
+  position:absolute;
+  left:16px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:18px;
+  pointer-events:none;
+  opacity:.75;
+}
+#liveSearch{
+  width:100%;
+  height:44px;
+  padding:10px 12px 10px 52px !important;
+  border:1px solid #d0d7ef;
+  border-radius:12px;
+  background:#fff;
+  color:#111;
+  outline:none;
+  font-weight:700;
+  font-size:16px;
+}
+#liveSearch:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(14,165,233,.18);
+}
+
+/* scroll area (table area scroll) */
+.scrollBoth{
+  border-top:1px solid var(--border);
+
+  -webkit-overflow-scrolling:touch;
+
+}
+
+/* table */
+table.table-fixed{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+thead th{
+  position:sticky;
+  top:0;
+  background:var(--thead);
+  color:var(--theadText);
+  font-weight:700;
+  border-bottom:1px solid var(--border);
+  padding:8px 10px;
+  white-space:nowrap;
+}
+tbody td{
+  padding:8px 10px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* widths desktop */
+.col-code{width:50px}
+.col-name{width:200px}
+.col-qty{width:60px}
+.col-disc{width:60px}
+.col-bonus{width:74px}
+.col-tp{width:70px}
+.col-tax{width:70px}
+
+.first-col{white-space:normal;word-break:break-word;font-weight:800;line-height:1.25;}
+.cell-name{white-space:normal !important;word-break:break-word;overflow-wrap:anywhere;font-weight:800;line-height:1.25}
+
+/* company row */
+.company-head td{
+  background:linear-gradient(90deg,#1e3a8a 0%,#2563eb 50%,#1e3a8a 100%);
+  color:#fff;
+  text-align:center;
+  font-weight:800;
+  letter-spacing:.5px;
+  border-bottom:1px solid var(--border);
+  padding:8px 0;
+  line-height:1.2;
+  text-shadow:0 0 8px rgba(0,0,0,.25);
+}
+
+/* qty */
+.qty-wrap{display:flex;justify-content:center}
+.qty-input{
+  width:100%;
+  max-width:72px;
+  min-width:56px;
+  text-align:center;
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+  border:1px solid #d0d7ef;
+  height:36px;
+  padding:6px 6px;
+  font-weight:800;
+}
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.qty-input[type=number]{ -moz-appearance:textfield; }
+
+/* footer */
+.footbar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  padding:12px 16px;
+  border-top:1px solid var(--border);
+}
+.pill{
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  border:1px solid var(--border);
+  background:var(--chip);
+  color:var(--text);
+  border-radius:10px;
+  padding:8px 12px;
+  font-weight:700;
+}
+
+/* customer title */
+.cust-title{
+  margin:6px 0 12px;
+  text-align:center;
+  font-weight:900;
+  font-size:20px;
+  letter-spacing:.3px;
+  color:var(--text);
+  text-shadow:0 2px 14px rgba(0,0,0,.25);
+}
+.cust-title::after{
+  content:"";
+  display:block;
+  width:180px;
+  height:3px;
+  margin:10px auto 0;
+  border-radius:999px;
+  background:linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity:.85;
+}
+#fldName{ font-size:16px; font-weight:800; letter-spacing:.2px; }
+
+/* hint */
+.hint{ padding:10px 16px 0; color:var(--muted); font-size:12px; }
+noscript .noscriptBox{
+  margin:10px 16px 0;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--chip);
+  color:var(--text);
+  font-size:12px;
+  font-weight:800;
+}
+
+/* whatsapp button */
+.btn-wa{
+  border: 1px solid rgba(34, 197, 94, .28);
+  background: linear-gradient(180deg, #16a34a 0%, #0f7a36 100%);
+  color: #fff !important;
+  border-radius: 12px;
+  padding: 8px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(16, 185, 129, .22);
+}
+.btn-wa:hover{
+  background: linear-gradient(180deg, #15803d 0%, #0d6b30 100%);
+  box-shadow: 0 14px 28px rgba(16, 185, 129, .28);
+}
+.btn-wa:active{
+  transform: translateY(1px);
+  filter: brightness(.98);
+}
+
+/* force name col wrap always */
+table.table-fixed tbody td:nth-child(2){
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+/* MOBILE */
+@media (max-width: 720px){
+  .wrap{ padding:10px 8px; }
+  .shopname{ font-size:22px; }
+  .addr{ font-size:12px; }
+
+  thead th, tbody td{
+    padding:2px 2px !important;
+    font-size:9px !important;
+    font-weight:700;
+  }
+
+  table.table-fixed tbody td{
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .col-code{width:10% !important;}
+  .col-name{width:35% !important;}
+  .col-qty{width:12% !important;}
+  .col-disc{width:12% !important;}
+  .col-bonus{width:12% !important;}
+  .col-tp{width:10% !important;}
+  .col-tax{width:9% !important;}
+
+  .cust-title{ font-size:16px; }
+  .cust-title::after{ width:140px; }
+
+  .cell-name, .cell-disc{
+    white-space:normal !important;
+    word-break:break-word;
+    overflow-wrap:anywhere;
+    font-weight:800;
+    line-height:1.25;
+    font-size:11px !important;
+  }
+
+  .qty-input{
+    min-width:42px !important;
+    max-width:52px !important;
+    height:32px !important;
+    font-size:12px !important;
+    padding:4px 4px !important;
+  }
+
+  /* heavy effects OFF on mobile */
+  .card, .promo-video{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+
+
+}
+
+/* reduce motion */
+
+/* === Order Slide Panel (mobile) === */
+.panel-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:1100;
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.panel-overlay.show{ display:block; }
+
+.order-panel{
+  position:fixed;
+  top:0;
+  right:0;
+  width:300px;
+  max-width:92vw;
+  height:100%;
+  background:var(--panelSolid);
+  border-left:1px solid var(--border);
+  box-shadow:-6px 0 32px rgba(0,0,0,.35);
+  z-index:1101;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:20px 16px;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;
+  will-change:transform;
+}
+
+/* swipe hint tab on right edge */
+.swipe-hint{
+  display:none;
+  position:fixed;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:18px;
+  padding:22px 4px;
+  background:linear-gradient(180deg,var(--grad1),var(--grad2));
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:2px;
+  writing-mode:vertical-rl;
+  border-radius:8px 0 0 8px;
+  cursor:pointer;
+  z-index:1099;
+  opacity:.7;
+  text-align:center;
+}
+@media(max-width:720px){
+  .swipe-hint{ display:flex; align-items:center; justify-content:center; }
+  .swipe-tip{ display:block !important; }
+}
+
+</style>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+<center><img src="https://anas-system.com/bis.png" alt="" style="width: 300px; height:80px"></center>
+
+      <div class="head">
+        <div>
+          <div class="meta" id="metaText"><b>List No : </b>
+000032
+<b>Date :
+12/04/2026
+</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="themeBtn" class="theme-toggle" type="button" aria-pressed="true">&#x2600;&#xFE0F; Light</button>
+          <button id="resetBtn" class="theme-toggle" type="button">Reset Qty</button>
+        </div>
+      </div>
+
+      <div class="shopbox">
+<h1 class="shopname">SSD MEDICO                           </h1>
+        <div class="addr" >
+                                        <br>                                        
+</div>
+      </div>
+
+      <div class="info">
+<span class="tag">OFFER LIST</span>
+  </div>
+
+      <div class="controls">
+        <div class="row">
+          <div class="search-box">
+<i>&#x1F50D;</i>
+            <input id="liveSearch" type="text" placeholder="Search products (code / name)" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        Note: WhatsApp/Viewer me agar buttons kaam na karein to "Open in Browser" (Microsoft Edge/ Google Chrome) karein<br>
+        Preview Order  & Generate pdf jab internet connect hoga tab kaam karainge.
+      </div>
+
+      <noscript>
+        <div class="noscriptBox">
+          Search/Preview/PDF/WhatsApp features ke liye browser me open karein.
+        </div>
+      </noscript>
+
+
+      <div class="scrollBoth" id="scrollWrap">
+        <table class="table-fixed">
+          <colgroup>
+            <col class="col-code">
+            <col class="col-name">
+            <col class="col-qty">
+            <col class="col-disc">
+            <col class="col-bonus">
+            <col class="col-tp">
+            <col class="col-tax">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="first-col">Code</th>
+              <th>Item Name</th>
+              <th>Order</th>
+              <th>Disc %</th>
+              <th>Bonus</th>
+              <th>T.P</th>
+              <th>Tax</th>
+            </tr>
+          </thead>
+
+          
+          <tbody id="itemsBody">
+<!--ITEMS_PLACEHOLDER-->
+</tbody>
+        </table>
+      </div>
+
+
+        <div class="row" style="padding-top:14px;padding-bottom:18px">
+          <div class="fld">
+            <h2 class="cust-title">Enter Customer Name / Shop Title</h2>
+            <input id="fldName" type="text" placeholder="Enter Customer Name / Shop Title" maxlength="120" required>
+          </div>
+        </div>
+
+
+      <input type="hidden" id="waNumber" value="+03112127664 ">
+
+      <div class="footbar">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="pill">Total Items: <b id="totalAll">0</b></span>
+          <span class="pill">Selected Items: <b id="totalSel">0</b></span>
+          <span class="pill">Net Total: <b id="netTotal">0.00</b></span>
+        </div>
+
+        <!-- ? Buttons -->
+ <form id="pdfForm" action="https://anas-system.com/pdf.php" method="POST" target="_blank" style="display:none">
+ <input type="hidden" name="payload" id="pdfPayload"></form>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="previewBtn" class="btn" type="button" style="font-weight:800">Preview Order &#x2197;</button>
+
+          <button id="prepareBtn" class="btn-wa" type="button">&#x1F7E2; Order &#x2192; WhatsApp</button>
+ <a id="pdfBtn" class="btn" href="#" style="font-weight:800">&#x1F4C4; PDF Order</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="swipe-tip" style="display:none;text-align:center;padding:6px 16px 8px;">
+    <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);opacity:.55;">
+      &#x1F4E6; Quick Order &mdash;
+      <svg width="32" height="14" viewBox="0 0 32 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="26" cy="7" rx="4" ry="5" fill="#7ca7d8" opacity=".7"/>
+        <rect x="22" y="4" width="4" height="5" rx="1.5" fill="#7ca7d8" opacity=".7"/>
+        <line x1="20" y1="7" x2="5" y2="7" stroke="#0ea5e9" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="9,3 4,7 9,11" stroke="#0ea5e9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      swipe from right edge
+    </span>
+  </div>
+
+<footer class="pub-footer" style="margin:16px auto 24px;max-width:1100px;padding:12px 16px;text-align:center;color:var(--muted)">
+  <div style="border-top:1px solid var(--border);padding-top:10px">
+    <strong>SSD MEDICOS</strong>
+  </div>
+</footer>
+<script>
+/* =========================
+   OFFLINE META
+========================= */
+var OFFLINE_META = {
+  offerId: "000032",
+  shopTitle: "MEDICOS                           ",
+  shopAddr: "                                                                                 ",
+  chips: ["OFFER LIST", "                              ", "                              "]
+};
+
+/* =========================
+   BASIC HELPERS (NO REGEX)
+========================= */
+function toStr(x){
+  if (x === null || x === undefined) return "";
+  return String(x);
+}
+
+function trimText(s){
+  return toStr(s).trim();
+}
+
+function toNum(x){
+  var s = toStr(x);
+  var out = "";
+  var i = 0;
+  var ch = "";
+
+  /* remove commas, spaces, % and arabic percent */
+  for (i = 0; i < s.length; i++){
+    ch = s.charAt(i);
+    if (ch === "," || ch === " " || ch === "%" || ch === "?") continue;
+    out += ch;
+  }
+
+  var n = parseFloat(out);
+  if (isNaN(n)) return 0;
+  return n;
+}
+
+function fmt2(n){
+  n = Number(n || 0);
+  return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+}
+
+/* optional: for preview html */
+function escapeHtml(s){
+  s = toStr(s);
+  var out = "";
+  var i = 0;
+  var ch = "";
+
+  for (i = 0; i < s.length; i++){
+    ch = s.charAt(i);
+    if (ch === "&") out += "&amp;";
+    else if (ch === "<") out += "&lt;";
+    else if (ch === ">") out += "&gt;";
+    else if (ch === '"') out += "&quot;";
+    else if (ch === "'") out += "&#39;";
+    else out += ch;
+  }
+  return out;
+}
+
+function normalizeWaPhone(raw){
+  var s = toStr(raw);
+  var out = "";
+  var i = 0;
+  var ch = "";
+
+  /* keep digits only */
+  for (i = 0; i < s.length; i++){
+    ch = s.charAt(i);
+    if (ch >= "0" && ch <= "9") out += ch;
+  }
+  return out;
+}
+
+function openWhatsApp(phoneDigits, text){
+  var url = "https://wa.me/" + phoneDigits + "?text=" + encodeURIComponent(text);
+  var w = window.open(url, "_blank");
+  if (!w) window.location.href = url;
+}
+
+/* =========================
+   DOM INIT
+========================= */
+var OFFER_ID = OFFLINE_META.offerId || 0;
+var LS_KEY_QTY  = "anas_offline_offer:" + OFFER_ID + ":qty";
+var LS_KEY_NAME = "anas_offline_offer:" + OFFER_ID + ":cust";
+
+var elBody     = document.getElementById("itemsBody");
+var elTotalAll = document.getElementById("totalAll");
+var elTotalSel = document.getElementById("totalSel");
+var elNetTotal = document.getElementById("netTotal");
+var live       = document.getElementById("liveSearch");
+var fldName    = document.getElementById("fldName");
+var waHidden   = document.getElementById("waNumber");
+
+var elShopTitle = document.getElementById("shopTitle");
+var elShopAddr  = document.getElementById("shopAddr");
+if (elShopTitle) elShopTitle.textContent = OFFLINE_META.shopTitle || "ANAS SYSTEM";
+if (elShopAddr)  elShopAddr.textContent  = OFFLINE_META.shopAddr  || "";
+
+(function renderChips(){
+  var box = document.getElementById("infoChips");
+  if (!box) return;
+
+  box.innerHTML = "";
+  var arr = OFFLINE_META.chips || [];
+  for (var i = 0; i < arr.length; i++){
+    var sp = document.createElement("span");
+    sp.className = "tag";
+    sp.textContent = arr[i];
+    box.appendChild(sp);
+  }
+})();
+
+/* =========================
+   WHATSAPP TEXT
+========================= */
+function buildWaMessage(payload){
+  var msg = "";
+
+  msg += "*Customer* : " + payload.customerName + "\n";
+  msg += "*List No* : 000032\n";
+  msg += "====================\n";
+
+  for (var i = 0; i < payload.items.length; i++){
+    var it = payload.items[i];
+    msg += "*Code* : " + it.code + "\n";
+    msg += "*QTY*  : " + it.qty + "\n";
+    msg += "*Disc* : " + it.disc + "%\n";
+    msg += "*Bonus*: " + it.bonus + "\n";
+    msg += "*ITM*  : " + it.name + "\n";
+    msg += "--------------------\n";
+  }
+  msg += "*Items* : " + payload.totalItems + "\n";
+  msg += "*Net* : " + payload.netTotal + "\n";
+  msg += "====================\n";
+
+  /* remove extra ending newlines (no regex) */
+  while (msg.length > 0 && msg.charAt(msg.length - 1) === "\n"){
+    msg = msg.substring(0, msg.length - 1);
+  }
+
+  return msg;
+}
+
+function buildOrderPayload(){
+  var cust = trimText(fldName ? fldName.value : "");
+
+  var lines = [];
+  var net = 0;
+
+  if (!elBody) return null;
+
+  var rows = elBody.querySelectorAll("tr.item-row");
+  for (var i = 0; i < rows.length; i++){
+    var r = rows[i];
+    var inp = r.querySelector("input.qty-input");
+    var q = inp ? (parseInt(inp.value, 10) || 0) : 0;
+    if (q <= 0) continue;
+
+    var code = "";
+    var name = "";
+
+    if (r.children[0]) code = trimText(r.children[0].textContent);
+    if (r.children[1]) name = trimText(r.children[1].textContent);
+
+    var tp    = toNum(r.getAttribute("data-tp"));
+    var disc  = toNum(r.getAttribute("data-disc"));
+    var tax   = toNum(r.getAttribute("data-tax"));
+var bonus = String(r.getAttribute("data-bonus") || "").trim(); // bonus as string
+
+    var gross = q * tp;
+    var discAmt = gross * (disc / 100);
+    var taxAmt  = q * tax;
+    var lineNet = gross - discAmt + taxAmt;
+
+    net += lineNet;
+
+    lines.push({
+      code: code,
+      name: name,
+      qty: q,
+      tp: tp,
+      disc: disc,
+      bonus: bonus,
+      tax: tax,
+      lineNet: Number(fmt2(lineNet))
+    });
+  }
+
+  if (lines.length === 0){
+    alert("Kam az kam 1 item ki qty enter karein.");
+    return null;
+  }
+
+  return {
+    offerId: OFFER_ID,
+    shopTitle: OFFLINE_META.shopTitle || "",
+    customerName: cust,
+    totalItems: lines.length,
+    netTotal: Number(fmt2(net)),
+    items: lines
+  };
+}
+
+var btnPrepare = document.getElementById("prepareBtn");
+if (btnPrepare){
+  btnPrepare.addEventListener("click", function(){
+    var payload = buildOrderPayload();
+    if (!payload) return;
+
+    var waRaw = waHidden ? waHidden.value : "+03112127664 ";
+    var waPhone = normalizeWaPhone(waRaw);
+
+    if (!waPhone){
+      alert("WhatsApp number missing hai.");
+      return;
+    }
+
+    var text = buildWaMessage(payload);
+    openWhatsApp(waPhone, text);
+  });
+}
+</script>
+
+<!-- Mobile Order Slide Panel -->
+<div class="swipe-hint" id="swipeHint" onclick="openOrderPanel()">ORDER</div>
+<div class="panel-overlay" id="panelOverlay"></div>
+<div class="order-panel" id="orderPanel">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:17px;font-weight:900;color:var(--text)">&#x1F4CB; Order</span>
+    <button onclick="closeOrderPanel()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;padding:4px 6px">&#x2715;</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="pill">Total: <b id="pTotalAll">0</b></span>
+    <span class="pill">Selected: <b id="pTotalSel">0</b></span>
+    <span class="pill">Net: <b id="pNetTotal">0.00</b></span>
+  </div>
+  <div>
+    <h2 class="cust-title" style="font-size:16px;margin-bottom:10px">Customer Name</h2>
+    <input id="fldNamePanel" type="text" placeholder="Enter Customer Name / Shop Title" maxlength="120" style="font-size:15px;font-weight:800;">
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button id="previewBtnP" class="btn" type="button" style="font-weight:800;justify-content:center;width:100%">Preview Order &#x2197;</button>
+    <button id="prepareBtnP" class="btn-wa" type="button" style="justify-content:center;width:100%">&#x1F7E2; Order &#x2192; WhatsApp</button>
+    <a id="pdfBtnP" class="btn" href="#" style="font-weight:800;justify-content:center;width:100%">&#x1F4C4; PDF Order</a>
+  </div>
+  <div style="margin-top:auto;padding-top:16px;text-align:center;color:var(--muted);font-size:11px;opacity:.6;user-select:none">
+    &#x27A1; swipe right to close
+  </div>
+</div>
+
+<script src="https://anas-system.com/anassystemnewoffer.js"></script>
+<script>
+(function(){
+  function localPdf(){
+    var payload = buildOrderPayload();
+    if (!payload) return;
+
+    var now = new Date();
+    var pad = function(n){ return String(n).padStart(2,'0'); };
+    var dateStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
+                  ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+    var rows = '';
+    for (var i = 0; i < payload.items.length; i++){
+      var it = payload.items[i];
+      var taxDisp = it.tax > 0 ? it.tax.toFixed(2) : '&mdash;';
+      rows += '<tr>' +
+        '<td>' + it.code + '</td>' +
+        '<td class="col-name">' + it.name + '</td>' +
+        '<td class="r">' + it.qty + '</td>' +
+        '<td class="r">' + it.tp.toFixed(2) + '</td>' +
+        '<td class="r">' + it.disc.toFixed(2) + '</td>' +
+        '<td class="r">' + taxDisp + '</td>' +
+        '<td class="r">' + it.lineNet.toFixed(2) + '</td>' +
+        '</tr>';
+    }
+
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      '<title>' + payload.shopTitle + '</title>' +
+      '<style>' +
+        'body{font-family:Arial,sans-serif;margin:24px;color:#000;font-size:13px}' +
+        'h1{font-size:22px;font-weight:bold;margin:0 0 6px}' +
+        '.meta{font-size:12px;margin-bottom:14px;line-height:1.6}' +
+        'table{width:100%;border-collapse:collapse}' +
+        'th{background:#dce8f7;color:#1a3a5c;padding:7px 9px;text-align:left;border:1px solid #b8d0ea;font-size:12px;font-weight:600;letter-spacing:.4px}' +
+        'td{padding:5px 9px;border:1px solid #ddd;font-size:12px;vertical-align:middle}' +
+        '.r{text-align:right}' +
+        '.col-name{max-width:240px;word-break:break-word}' +
+        'tfoot td{font-weight:bold;border-top:2px solid #333;background:#f7f7f7}' +
+        '@media print{@page{margin:15mm}button{display:none}}' +
+      '</style></head><body>' +
+      '<h1>' + payload.shopTitle + '</h1>' +
+      '<div class="meta">' +
+        'Date: ' + dateStr + '<br>' +
+        'Total Items: ' + payload.totalItems + '<br>' +
+        '<b>Name: ' + (payload.customerName || '&mdash;') + '</b>' +
+      '</div>' +
+      '<table>' +
+        '<thead><tr>' +
+          '<th>Code</th><th>Item</th><th class="r">Qty</th>' +
+          '<th class="r">TP</th><th class="r">Disc%</th>' +
+          '<th class="r">Tax</th><th class="r">Net</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+        '<tfoot><tr>' +
+          '<td colspan="6" class="r">Total</td>' +
+          '<td class="r">' + payload.netTotal.toFixed(2) + '</td>' +
+        '</tr></tfoot>' +
+      '</table>' +
+      '</body></html>';
+
+    var w = window.open('', '_blank');
+    if (!w){ alert("Popup blocked. Please allow popups in your browser."); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(function(){ w.print(); }, 400);
+  }
+
+  window.addEventListener('load', function(){
+    var btn = document.getElementById('pdfBtn');
+    if (!btn) return;
+    var newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    newBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      localPdf();
+    });
+  });
+})();
+
+// ── Order Slide Panel ──────────────────────────────────────
+var _panelOpen = false;
+
+function syncPanelData(){
+  ['totalAll','totalSel','netTotal'].forEach(function(id){
+    var src = document.getElementById(id);
+    var dst = document.getElementById('p' + id.charAt(0).toUpperCase() + id.slice(1));
+    if (src && dst) dst.textContent = src.textContent;
+  });
+  var orig = document.getElementById('fldName');
+  var pi   = document.getElementById('fldNamePanel');
+  if (orig && pi) pi.value = orig.value;
+}
+
+function openOrderPanel(){
+  _panelOpen = true;
+  syncPanelData();
+  var panel = document.getElementById('orderPanel');
+  panel.style.transition = '';
+  panel.style.transform  = 'translateX(0)';
+  document.getElementById('panelOverlay').classList.add('show');
+}
+
+function closeOrderPanel(){
+  _panelOpen = false;
+  var panel = document.getElementById('orderPanel');
+  panel.style.transition = '';
+  panel.style.transform  = 'translateX(100%)';
+  document.getElementById('panelOverlay').classList.remove('show');
+}
+
+window.addEventListener('DOMContentLoaded', function(){
+  var orig       = document.getElementById('fldName');
+  var panelInput = document.getElementById('fldNamePanel');
+  var overlay    = document.getElementById('panelOverlay');
+
+  overlay.addEventListener('click', function(){ closeOrderPanel(); });
+
+  // ── Swipe gestures ──────────────────────────────────────
+  var tStartX = 0, tStartY = 0, tCurX = 0, tCurY = 0;
+  var swipeMode = null;
+  var panelEl   = document.getElementById('orderPanel');
+  var EDGE_ZONE = 80;
+
+  document.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    tStartX = tCurX = t.clientX;
+    tStartY = tCurY = t.clientY;
+    swipeMode = null;
+
+    if (!_panelOpen && tStartX > window.innerWidth - EDGE_ZONE){
+      swipeMode = 'open';
+      panelEl.style.transition = 'none'; // freeze immediately
+    } else if (_panelOpen){
+      swipeMode = 'close';
+      panelEl.style.transition = 'none';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e){
+    if (!swipeMode) return;
+    tCurX = e.touches[0].clientX;
+    tCurY = e.touches[0].clientY;
+    var dx = tCurX - tStartX;
+    var dy = tCurY - tStartY;
+
+    // cancel if clearly a vertical scroll (needs 12px vertical + more vertical than horiz)
+    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.5){
+      swipeMode = null;
+      panelEl.style.transition = '';
+      panelEl.style.transform  = _panelOpen ? 'translateX(0)' : 'translateX(100%)';
+      return;
+    }
+
+    var pw = panelEl.offsetWidth || 300;
+    var tx;
+    if (swipeMode === 'open'){
+      tx = Math.max(0, Math.min(pw, pw + dx)); // dx<0: panel slides in
+    } else {
+      tx = Math.max(0, Math.min(pw, dx));      // dx>0: panel slides out
+    }
+    panelEl.style.transform = 'translateX(' + tx + 'px)';
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(){
+    if (!swipeMode) return;
+    var mode = swipeMode;
+    swipeMode = null;
+    var dx = tCurX - tStartX;
+    var pw = panelEl.offsetWidth || 300;
+    panelEl.style.transition = ''; // re-enable smooth snap
+
+    if (mode === 'open'){
+      if (-dx > pw * 0.20) openOrderPanel();
+      else panelEl.style.transform = 'translateX(100%)';
+    } else {
+      if (dx > pw * 0.20) closeOrderPanel();
+      else panelEl.style.transform = 'translateX(0)';
+    }
+  }, { passive: true });
+
+  // two-way name sync
+  if (orig && panelInput){
+    panelInput.addEventListener('input', function(){ orig.value = panelInput.value; });
+    orig.addEventListener('input', function(){ panelInput.value = orig.value; });
+  }
+
+  // panel action buttons delegate to originals
+  function delegate(panelId, origId, isPdf){
+    var p = document.getElementById(panelId);
+    var o = document.getElementById(origId);
+    if (!p || !o) return;
+    p.addEventListener('click', function(e){
+      if (isPdf) e.preventDefault();
+      if (orig && panelInput) orig.value = panelInput.value;
+      o.click();
+    });
+  }
+  delegate('previewBtnP', 'previewBtn', false);
+  delegate('prepareBtnP', 'prepareBtn', false);
+  delegate('pdfBtnP',     'pdfBtn',     true);
+
+  // keep panel totals live while open
+  var observer = new MutationObserver(function(){
+    if (!document.getElementById('orderPanel').classList.contains('open')) return;
+    ['totalAll','totalSel','netTotal'].forEach(function(id){
+      var src = document.getElementById(id);
+      var dst = document.getElementById('p' + id.charAt(0).toUpperCase() + id.slice(1));
+      if (src && dst) dst.textContent = src.textContent;
+    });
+  });
+  ['totalAll','totalSel','netTotal'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) observer.observe(el, { childList:true, characterData:true, subtree:true });
+  });
+});
+</script>
+</body>
+</html>
+

@@ -12,7 +12,7 @@ from update_htm import (
     parse_discount_value, generate_item_row, generate_section_header,
     generate_js_vars_full, generate_js_vars_simple, generate_js_vars_createrows,
     generate_js_if_blocks, generate_js_if_blocks_pdf, generate_js_if_blocks_whatsapp,
-    update_htm
+    update_htm, generate_html_new_format
 )
 
 # Import the search functionality
@@ -37,8 +37,24 @@ app.secret_key = 'medicinesearch_supersecret_key'  # Needed for sessions
 # Store processed results temporarily
 processed_results = {}
 
+def _fmt_tp(text):
+    """Strip text to a clean numeric TP string like '2188.75'. Returns '' if non-numeric."""
+    if not text:
+        return ""
+    cleaned = ''.join(ch for ch in text if ch.isdigit() or ch == '.')
+    if not cleaned:
+        return ""
+    try:
+        return f"{float(cleaned):.2f}"
+    except ValueError:
+        return ""
+
 def process_htm_content(html_content, decrease_value=1, stock_format=False, new_format=False):
-    """Process HTM content and extract medicine names with discount rates."""
+    """Process HTM content and extract medicine names with discount rates.
+
+    Each result also carries the extra fields needed by the new-format generator:
+    code, tp, bonus, tax. Tax defaults to '0.00' when the input does not carry it.
+    """
     soup = BeautifulSoup(html_content, "html.parser")
     results = []
 
@@ -57,6 +73,8 @@ def process_htm_content(html_content, decrease_value=1, stock_format=False, new_
             # Prefer data-disc attribute; fall back to data-bonus if disc is 0
             disc_attr = item.get("data-disc", "").strip()
             bonus_attr = item.get("data-bonus", "").strip()
+            tp_attr = item.get("data-tp", "").strip()
+            tax_attr = item.get("data-tax", "").strip()
 
             try:
                 disc_num = float(disc_attr) if disc_attr else 0.0
@@ -72,21 +90,44 @@ def process_htm_content(html_content, decrease_value=1, stock_format=False, new_
             else:
                 discount_rate = "0.00%"
 
-            results.append({'name': medicine_name, 'discount': discount_rate})
+            # Code: prefer first <td> text, fall back to data-id stripped of trailing digits
+            code = columns[0].text.strip() if columns else ""
+
+            results.append({
+                'name': medicine_name,
+                'discount': discount_rate,
+                'code': code,
+                'tp': _fmt_tp(tp_attr),
+                'bonus': bonus_attr,
+                'tax': _fmt_tp(tax_attr) or "0.00",
+            })
 
     else:
         # Default / stock format: <tr class="item">
         items = soup.find_all("tr", class_="item")
-        # Column index for medicine name differs based on file format
-        # Stock format: columns[2], Default format: columns[1]
-        name_index = 2 if stock_format else 1
+        # Column layouts differ:
+        #   Stock format:  [SR#, Code, Name, Disc%, T.P, Box, Pcs, Cost, Amount]
+        #   Default offer: [Code, Name, Order(qty), Disc%, Bonus, T.P (colspan=2)]
+        if stock_format:
+            name_index, code_index, disc_index = 2, 1, 3
+            tp_index, bonus_index = 4, None
+        else:
+            name_index, code_index, disc_index = 1, 0, 3
+            tp_index, bonus_index = 5, 4
 
         for item in items:
             columns = item.find_all("td")
             if len(columns) >= 4:
                 # Extract medicine name and apply title case
                 medicine_name = columns[name_index].text.strip().title()
-                discount_rate = columns[3].text.strip()
+                discount_rate = columns[disc_index].text.strip()
+                code = columns[code_index].text.strip() if code_index < len(columns) else ""
+                bonus_text = (columns[bonus_index].text.strip()
+                              if bonus_index is not None and bonus_index < len(columns)
+                              else "")
+                tp_text = (columns[tp_index].text.strip()
+                           if tp_index is not None and tp_index < len(columns)
+                           else "")
 
                 # Check if discount is 0.00% and get bonus rate if available
                 if discount_rate == "0.00%" and len(columns) >= 5:
@@ -123,21 +164,36 @@ def process_htm_content(html_content, decrease_value=1, stock_format=False, new_
 
                 results.append({
                     'name': medicine_name,
-                    'discount': discount_rate
+                    'discount': discount_rate,
+                    'code': code,
+                    'tp': _fmt_tp(tp_text),
+                    'bonus': bonus_text,
+                    'tax': "0.00",
                 })
 
     return results
 
-def generate_text_output(results, separator=','):
-    """Generate text file content from results."""
+def generate_text_output(results, separator=',', extended=False):
+    """Generate text file content from results.
+
+    extended=False -> 'Name----- Disc%,'  (legacy, byte-compatible with old behaviour)
+    extended=True  -> 'code|Name----- Disc%|tp|bonus|tax'  (no trailing separator)
+    """
     lines = []
     for item in results:
-        # Check if the discount already contains a separator, if so don't add another
         discount = item['discount']
-        if separator and not discount.endswith(separator):
-            output_line = f"{item['name']}----- {discount}{separator}"
+        if extended:
+            code = item.get('code', '') or ''
+            tp = item.get('tp', '') or ''
+            bonus = item.get('bonus', '') or ''
+            tax = item.get('tax', '') or '0.00'
+            disc_field = f"{discount}{separator}" if separator and not discount.endswith(separator) else discount
+            output_line = f"{code}|{item['name']}----- {disc_field}|{tp}|{bonus}|{tax}"
         else:
-            output_line = f"{item['name']}----- {discount}"
+            if separator and not discount.endswith(separator):
+                output_line = f"{item['name']}----- {discount}{separator}"
+            else:
+                output_line = f"{item['name']}----- {discount}"
         lines.append(output_line)
     return '\n'.join(lines)
 
@@ -177,6 +233,10 @@ def upload_file():
     # Get new format checkbox (default to False)
     new_format = request.form.get('new_format', 'false').lower() == 'true'
 
+    # Output format: 'old' (default, name+disc only) or 'extended' (with code|tp|bonus|tax)
+    output_format = request.form.get('output_format', 'old').lower()
+    extended_output = output_format == 'extended'
+
     try:
         html_content = file.read().decode('utf-8')
     except UnicodeDecodeError:
@@ -184,7 +244,7 @@ def upload_file():
         html_content = file.read().decode('latin-1')
 
     results = process_htm_content(html_content, decrease_value, stock_format, new_format)
-    text_output = generate_text_output(results, separator)
+    text_output = generate_text_output(results, separator, extended=extended_output)
 
     # Store for download
     filename_base = os.path.splitext(file.filename)[0]
@@ -224,7 +284,12 @@ def download_file():
 # ============ MAKE HTML FILE FUNCTIONALITY ============
 
 def parse_text_content(text_content):
-    """Parse text content (data.txt format) and return list of (item_name, discount_or_bonus)"""
+    """Parse text content (data.txt format) and return list of (item_name, discount_or_bonus).
+
+    Accepts both legacy lines ('Name----- 7%') and extended lines
+    ('code|Name----- 7%|tp|bonus|tax'). Only the name/value pair is returned —
+    callers that need the extended fields should use parse_text_content_extended().
+    """
     items = []
     for line in text_content.split('\n'):
         line = line.strip()
@@ -232,14 +297,69 @@ def parse_text_content(text_content):
             continue
         if '→' in line:
             line = line.split('→', 1)[1]
+        # If the line is in extended format, the name/value pair lives in the 2nd column.
+        if '|' in line:
+            parts_pipe = line.split('|')
+            if len(parts_pipe) >= 2 and '-----' in parts_pipe[1]:
+                line = parts_pipe[1]
         if '-----' in line:
             parts = line.split('-----')
             item_name = parts[0].strip()
             value = parts[1].strip() if len(parts) > 1 else ''
-            # Preserve common separators that might be used for recognition
-            # but trim extra whitespace
             value = value.strip()
+            # Strip trailing separators (',' / ';') that the writer added.
+            while value and value[-1] in ',;':
+                value = value[:-1].rstrip()
             items.append((item_name, value))
+    return items
+
+def parse_text_content_extended(text_content):
+    """Parse text content and return a list of dicts with all fields.
+
+    Each dict has: name, value, code, tp, bonus, tax.
+    Legacy lines (without '|') still parse: code/tp/bonus default empty, tax='0.00'.
+    """
+    items = []
+    for line in text_content.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        if '→' in line:
+            line = line.split('→', 1)[1]
+
+        code, tp, bonus, tax = "", "", "", "0.00"
+
+        if '|' in line:
+            parts_pipe = line.split('|')
+            # Expected layout: code | name----- disc% | tp | bonus | tax
+            code = parts_pipe[0].strip()
+            name_value_part = parts_pipe[1] if len(parts_pipe) > 1 else line
+            if len(parts_pipe) > 2:
+                tp = parts_pipe[2].strip()
+            if len(parts_pipe) > 3:
+                bonus = parts_pipe[3].strip()
+            if len(parts_pipe) > 4 and parts_pipe[4].strip():
+                tax = parts_pipe[4].strip()
+            line_for_namevalue = name_value_part
+        else:
+            line_for_namevalue = line
+
+        if '-----' not in line_for_namevalue:
+            continue
+
+        name_part, _, value_part = line_for_namevalue.partition('-----')
+        name = name_part.strip()
+        value = value_part.strip()
+        # Keep separator intact so it shows in generated HTML
+
+        items.append({
+            'name': name,
+            'value': value,
+            'code': code,
+            'tp': tp,
+            'bonus': bonus,
+            'tax': tax,
+        })
     return items
 
 def generate_html_from_template(data_items, template_path, list_no="000001", list_date=None, title="S.S.D PHARMA", whatsapp_number="923337068868"):
@@ -427,6 +547,10 @@ def generate_html():
     list_type = request.form.get('list_type', 'M')
     if list_type not in ('M', 'C'):
         list_type = 'M'
+    # Output format selection: 'old' (default), 'new', or 'both'
+    output_format = request.form.get('output_format', 'old').lower()
+    if output_format not in ('old', 'new', 'both'):
+        output_format = 'old'
     # Remove any non-digit characters from WhatsApp number
     whatsapp_number = ''.join(filter(str.isdigit, whatsapp_number))
 
@@ -436,49 +560,76 @@ def generate_html():
         file.seek(0)
         text_content = file.read().decode('latin-1')
 
-    # Parse text content
+    # Parse text content (legacy tuples, used by the old generator)
     data_items = parse_text_content(text_content)
 
     if not data_items:
         return jsonify({'error': 'No valid items found in the file. Format should be: item_name----- discount%'}), 400
 
-    # Get template path
-    template_path = os.path.join(os.path.dirname(__file__), 'list_to_htm', 'list.HTM')
+    base_dir = os.path.dirname(__file__)
+    template_path_old = os.path.join(base_dir, 'list_to_htm', 'list.HTM')
+    template_path_new = os.path.join(base_dir, 'list_to_htm', 'list_new.HTM')
 
-    if not os.path.exists(template_path):
-        return jsonify({'error': 'Template file not found'}), 500
-
-    # Generate HTML
-    html_content, error = generate_html_from_template(data_items, template_path, list_no, list_date, title, whatsapp_number)
-
-    if error:
-        return jsonify({'error': error}), 500
-
-    # Store for download
-    output_filename = f"offer_list_{list_type}{list_no}.htm"
-    processed_results['html_latest'] = {
-        'content': html_content,
-        'filename': output_filename,
-        'count': len(data_items)
+    response_payload = {
+        'success': True,
+        'count': len(data_items),
+        'output_format': output_format,
     }
 
-    return jsonify({
-        'success': True,
-        'filename': output_filename,
-        'count': len(data_items),
-        'message': f'Generated HTML with {len(data_items)} items'
-    })
+    # ---- OLD format ----
+    if output_format in ('old', 'both'):
+        if not os.path.exists(template_path_old):
+            return jsonify({'error': 'Old-format template file not found'}), 500
+        html_old, err_old = generate_html_from_template(
+            data_items, template_path_old, list_no, list_date, title, whatsapp_number
+        )
+        if err_old:
+            return jsonify({'error': err_old}), 500
+        old_filename = f"offer_list_{list_type}{list_no}.htm"
+        processed_results['html_latest'] = {
+            'content': html_old, 'filename': old_filename, 'count': len(data_items),
+        }
+        response_payload['old_filename'] = old_filename
 
-@app.route('/download-html')
-def download_html():
-    if 'html_latest' not in processed_results:
+    # ---- NEW format ----
+    if output_format in ('new', 'both'):
+        if not os.path.exists(template_path_new):
+            return jsonify({'error': 'New-format template file not found'}), 500
+        # New format needs the extended fields. Re-parse the same text in extended mode.
+        items_extended = parse_text_content_extended(text_content)
+        if not items_extended:
+            return jsonify({'error': 'No valid items for new format'}), 400
+        # Sanity: warn if NO line in the file had TP — new format is meaningless without it.
+        if not any((it.get('tp') or '').strip() for it in items_extended):
+            return jsonify({
+                'error': 'New format needs T.P values. Re-export your TXT in '
+                         '"Extended TXT" mode from the home page (or include code|name|tp|bonus|tax).'
+            }), 400
+        html_new, err_new = generate_html_new_format(
+            template_path_new, items_extended, list_no, list_date, title, whatsapp_number
+        )
+        if err_new:
+            return jsonify({'error': err_new}), 500
+        new_filename = f"offer_list_{list_type}{list_no}_new.htm"
+        processed_results['html_latest_new'] = {
+            'content': html_new, 'filename': new_filename, 'count': len(items_extended),
+        }
+        response_payload['new_filename'] = new_filename
+
+    # Backwards-compatible top-level filename: prefer old when present, else new.
+    response_payload['filename'] = (
+        response_payload.get('old_filename') or response_payload.get('new_filename')
+    )
+    response_payload['message'] = f'Generated {output_format} format with {len(data_items)} items'
+    return jsonify(response_payload)
+
+def _send_html_payload(slot, suffix=""):
+    if slot not in processed_results:
         return "No file to download", 404
-
-    data = processed_results['html_latest']
+    data = processed_results[slot]
     buffer = io.BytesIO()
     buffer.write(data['content'].encode('utf-8'))
     buffer.seek(0)
-
     return send_file(
         buffer,
         as_attachment=True,
@@ -486,13 +637,25 @@ def download_html():
         mimetype='text/html'
     )
 
+@app.route('/download-html')
+def download_html():
+    return _send_html_payload('html_latest')
+
+@app.route('/download-html-new')
+def download_html_new():
+    return _send_html_payload('html_latest_new')
+
 @app.route('/preview-html')
 def preview_html():
     if 'html_latest' not in processed_results:
         return "No HTML generated yet. Please generate HTML first.", 404
+    return processed_results['html_latest']['content']
 
-    data = processed_results['html_latest']
-    return data['content']
+@app.route('/preview-html-new')
+def preview_html_new():
+    if 'html_latest_new' not in processed_results:
+        return "No new-format HTML generated yet. Please generate HTML first.", 404
+    return processed_results['html_latest_new']['content']
 
 # ============ SEARCH MEDICINES FUNCTIONALITY ============
 

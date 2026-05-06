@@ -956,6 +956,25 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label>Output Format</label>
+                <div class="list-type-toggle">
+                    <button type="button" class="list-type-btn active" id="btnFmtOld" onclick="selectOutputFormat('old')">
+                        📜 Old Format
+                    </button>
+                    <button type="button" class="list-type-btn" id="btnFmtNew" onclick="selectOutputFormat('new')">
+                        ✨ New Format
+                    </button>
+                    <button type="button" class="list-type-btn" id="btnFmtBoth" onclick="selectOutputFormat('both')">
+                        🧩 Both
+                    </button>
+                </div>
+                <input type="hidden" id="output_format" name="output_format" value="old">
+                <div style="margin-top: 6px; font-size: 12px; color: var(--text-secondary);">
+                    New format requires Extended TXT (with code|tp|bonus|tax). Generate it from the home page.
+                </div>
+            </div>
+
             <!-- Upload Section -->
             <div class="form-group" id="uploadSection">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -995,6 +1014,17 @@
                     </div>
                 </div>
 
+                <div id="colToggles" style="display:none; margin:8px 0; padding:8px 12px; background:#f0f4ff; border:1px solid #c8d8f0; border-radius:6px; font-size:12px; display:none; flex-wrap:wrap; gap:12px; align-items:center;">
+                    <span style="font-weight:600; color:#333;">Columns:</span>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colNum" checked onchange="updatePreview()"> #</label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colCode" checked onchange="updatePreview()"> Code</label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colName" checked onchange="updatePreview()"> Name</label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colDisc" checked onchange="updatePreview()"> Disc%</label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colBonus" onchange="updatePreview()"> Bonus</label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colTp" onchange="updatePreview()"> T.P</label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colTax" onchange="updatePreview()"> Tax</label>
+                </div>
+
                 <div class="preview-content" id="previewContent">
                     <table>
                         <thead id="previewTableHead">
@@ -1030,12 +1060,20 @@
                 <div class="result-card" id="resultCard">
                     <div id="resultMessage"></div>
                 </div>
-                <div class="result-buttons">
+                <div class="result-buttons" id="resultButtonsOld">
                     <button class="btn btn-primary" onclick="previewHTML()">
-                        👁️ Preview HTML
+                        👁️ Preview HTML (Old)
                     </button>
                     <button class="btn btn-success" onclick="downloadHTML()">
-                        ⬇️ Download HTML
+                        ⬇️ Download HTML (Old)
+                    </button>
+                </div>
+                <div class="result-buttons" id="resultButtonsNew" style="display: none; margin-top: 8px;">
+                    <button class="btn btn-primary" onclick="previewHTMLNew()">
+                        👁️ Preview HTML (New)
+                    </button>
+                    <button class="btn btn-success" onclick="downloadHTMLNew()">
+                        ⬇️ Download HTML (New)
                     </button>
                 </div>
             </div>
@@ -1097,10 +1135,24 @@
             updateFilenamePreview();
         }
 
+        function selectOutputFormat(fmt) {
+            document.getElementById('output_format').value = fmt;
+            document.getElementById('btnFmtOld').classList.toggle('active', fmt === 'old');
+            document.getElementById('btnFmtNew').classList.toggle('active', fmt === 'new');
+            document.getElementById('btnFmtBoth').classList.toggle('active', fmt === 'both');
+            updateFilenamePreview();
+        }
+
         function updateFilenamePreview() {
             const listNo = document.getElementById('list_no').value || '000001';
             const type = document.getElementById('list_type').value;
-            document.getElementById('filenamePreview').textContent = `offer_list_${type}${listNo}.htm`;
+            const fmt = document.getElementById('output_format').value;
+            const old = `offer_list_${type}${listNo}.htm`;
+            const neu = `offer_list_${type}${listNo}_new.htm`;
+            const preview = (fmt === 'new') ? neu
+                          : (fmt === 'both') ? `${old} + ${neu}`
+                          : old;
+            document.getElementById('filenamePreview').textContent = preview;
         }
 
         // Set default date to today (works on all browsers/devices)
@@ -1207,21 +1259,40 @@
             for (let line of lines) {
                 line = line.trim();
                 if (!line) continue;
-                if (line.includes('→')) line = line.split('→')[1];
-                if (line.includes('-----')) {
+                if (line.includes('→')) line = line.split('→')[1].trim();
+                if (!line.includes('-----')) continue;
+
+                let code = '', tp = '', bonus = '', tax = '', isExtended = false;
+                let name, value;
+
+                if (line.includes('|')) {
+                    isExtended = true;
+                    const pp = line.split('|');
+                    code = pp[0].trim();
+                    const mid = pp[1] || '';
+                    tp     = (pp[2] || '').trim();
+                    bonus  = (pp[3] || '').trim();
+                    tax    = (pp[4] || '').trim();
+                    const di = mid.indexOf('-----');
+                    if (di >= 0) {
+                        name  = mid.substring(0, di).trim();
+                        value = mid.substring(di + 5).trim();
+                    } else {
+                        name = mid.trim(); value = '';
+                    }
+                } else {
                     const parts = line.split('-----');
-                    const name = parts[0].trim();
-                    let value = parts[1] ? parts[1].trim() : '';
-                    items.push({ name, value });
+                    name  = parts[0].trim();
+                    value = parts[1] ? parts[1].trim() : '';
                 }
+
+                items.push({ name, value, code, tp, bonus, tax, isExtended, original: line });
             }
-            // Sort alphabetically by name
             items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
             return items;
         }
 
         function updatePreview() {
-            // Save scroll position before updating
             const previewContent = document.getElementById('previewContent');
             const savedScrollTop = previewContent ? previewContent.scrollTop : 0;
             const savedWindowScrollY = window.scrollY;
@@ -1229,71 +1300,83 @@
             const items = parseItems(editorTextarea.value);
             const tbody = document.getElementById('previewTableBody');
             const thead = document.getElementById('previewTableHead');
+            const deleteEnabled = document.getElementById('enableDeleteButtons') && document.getElementById('enableDeleteButtons').checked;
+            const editEnabled   = document.getElementById('enableEditButtons')   && document.getElementById('enableEditButtons').checked;
 
-            // Check if delete and edit buttons are currently enabled
-            const deleteCheckbox = document.getElementById('enableDeleteButtons');
-            const deleteButtonsEnabled = deleteCheckbox && deleteCheckbox.checked;
-            const editCheckbox = document.getElementById('enableEditButtons');
-            const editButtonsEnabled = editCheckbox && editCheckbox.checked;
+            const hasExtended = items.some(it => it.isExtended);
+            const colToggles = document.getElementById('colToggles');
+            if (colToggles) colToggles.style.display = hasExtended ? 'flex' : 'none';
 
-            // Update header based on delete button state
+            const chk = id => { const el = document.getElementById(id); return !el || el.checked; };
+            const vis = {
+                num:   chk('colNum'),
+                code:  hasExtended && chk('colCode'),
+                name:  chk('colName'),
+                disc:  chk('colDisc'),
+                bonus: hasExtended && chk('colBonus'),
+                tp:    hasExtended && chk('colTp'),
+                tax:   hasExtended && chk('colTax'),
+            };
+
+            const visCount = Object.values(vis).filter(Boolean).length + (deleteEnabled ? 1 : 0);
+
             let headerHtml = '<tr>';
-            if (deleteButtonsEnabled) {
-                headerHtml += '<th class="col-delete"></th>';
-            }
-            headerHtml += `<th class="col-num">#</th>
-                <th class="col-name">Item Name</th>
-                <th class="col-value">Discount/Bonus</th>
-            </tr>`;
+            if (deleteEnabled)  headerHtml += '<th class="col-delete"></th>';
+            if (vis.num)   headerHtml += '<th class="col-num">#</th>';
+            if (vis.code)  headerHtml += '<th style="width:65px">Code</th>';
+            if (vis.name)  headerHtml += '<th class="col-name">Item Name</th>';
+            if (vis.disc)  headerHtml += '<th class="col-value">Disc%</th>';
+            if (vis.bonus) headerHtml += '<th class="col-value">Bonus</th>';
+            if (vis.tp)    headerHtml += '<th class="col-value">T.P</th>';
+            if (vis.tax)   headerHtml += '<th class="col-value">Tax</th>';
+            headerHtml += '</tr>';
             thead.innerHTML = headerHtml;
 
             let html = '';
             let currentLetter = '';
-
-            // Calculate colspan based on enabled buttons
-            let extraCols = deleteButtonsEnabled ? 1 : 0;
 
             items.forEach((item, i) => {
                 const firstLetter = item.name.charAt(0).toUpperCase();
                 if (firstLetter !== currentLetter) {
                     currentLetter = firstLetter;
                     html += `<tr style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white;">
-                        <td colspan="${3 + extraCols}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
+                        <td colspan="${visCount}" style="text-align:center;font-weight:bold;padding:8px;">${currentLetter}</td>
                     </tr>`;
                 }
 
-                let rowHtml = '<tr>';
+                const da = `data-name="${escapeHtml(item.name)}" data-value="${escapeHtml(item.value)}" `+
+                           `data-code="${escapeHtml(item.code)}" data-tp="${escapeHtml(item.tp)}" `+
+                           `data-bonus="${escapeHtml(item.bonus)}" data-tax="${escapeHtml(item.tax)}" `+
+                           `data-extended="${item.isExtended ? '1' : '0'}"`;
 
-                // Add delete button if enabled
-                if (deleteButtonsEnabled) {
-                    rowHtml += `<td class="col-delete">
-                        <button class="delete-btn" onclick="deleteRow(this.closest('tr'))"
-                            style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
-                            title="Delete this row">✕</button>
-                    </td>`;
+                let rowHtml = `<tr class="item-row" ${da}>`;
+
+                if (deleteEnabled) {
+                    rowHtml += `<td class="col-delete"><button class="delete-btn" onclick="deleteRow(this.closest('tr'))"
+                        style="background:#dc3545;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;margin:0 auto;"
+                        title="Delete this row">✕</button></td>`;
                 }
 
-                // Make name and value cells clickable for inline editing if enabled
-                const editableStyle = editButtonsEnabled ? 'cursor: pointer;' : '';
-                const editableClass = editButtonsEnabled ? 'editable-cell' : '';
-                const nameClick = editButtonsEnabled ? `onclick="editCellInline(this, 'name', '${escapeHtml(item.name)}', '${escapeHtml(item.value)}')"` : '';
-                const valueClick = editButtonsEnabled ? `onclick="editCellInline(this, 'value', '${escapeHtml(item.name)}', '${escapeHtml(item.value)}')"` : '';
+                const ec = editEnabled ? 'editable-cell' : '';
+                const es = editEnabled ? 'cursor:pointer;' : '';
+                const mk = ft => editEnabled ? `onclick="editCellInline(this,'${ft}')"` : '';
 
-                rowHtml += `<td class="col-num">${i + 1}</td>
-                    <td class="col-name ${editableClass}" style="${editableStyle}" ${nameClick}>${item.name}</td>
-                    <td class="col-value ${editableClass}" style="${editableStyle}" ${valueClick}>${item.value}</td>
-                </tr>`;
+                if (vis.num)   rowHtml += `<td class="col-num">${i + 1}</td>`;
+                if (vis.code)  rowHtml += `<td class="${ec}" style="${es}" ${mk('code')}>${item.code}</td>`;
+                if (vis.name)  rowHtml += `<td class="col-name ${ec}" style="${es}" ${mk('name')}>${item.name}</td>`;
+                if (vis.disc)  rowHtml += `<td class="col-value ${ec}" style="${es}" ${mk('value')}>${item.value}</td>`;
+                if (vis.bonus) rowHtml += `<td class="col-value ${ec}" style="${es}" ${mk('bonus')}>${item.bonus}</td>`;
+                if (vis.tp)    rowHtml += `<td class="col-value ${ec}" style="${es}" ${mk('tp')}>${item.tp}</td>`;
+                if (vis.tax)   rowHtml += `<td class="col-value ${ec}" style="${es}" ${mk('tax')}>${item.tax}</td>`;
 
+                rowHtml += '</tr>';
                 html += rowHtml;
             });
 
             tbody.innerHTML = html;
 
-            // Restore scroll position after updating
             requestAnimationFrame(() => {
-                if (previewContent) {
-                    previewContent.scrollTop = savedScrollTop;
-                }
+                if (previewContent) previewContent.scrollTop = savedScrollTop;
                 window.scrollTo(0, savedWindowScrollY);
             });
         }
@@ -1321,6 +1404,7 @@
             formData.append('title', titleInput.value);
             formData.append('whatsapp_number', whatsappInput.value);
             formData.append('list_type', document.getElementById('list_type').value);
+            formData.append('output_format', document.getElementById('output_format').value);
 
             loading.style.display = 'block';
             result.style.display = 'none';
@@ -1339,10 +1423,22 @@
 
                 if (data.success) {
                     resultCard.className = 'result-card';
-                    resultMessage.innerHTML = `<strong>✓ Success!</strong> Generated HTML with ${data.count} items<br><small>File: ${data.filename}</small>`;
+                    const oldName = data.old_filename || '';
+                    const newName = data.new_filename || '';
+                    let fileLine = '';
+                    if (oldName && newName) {
+                        fileLine = `<small>Files: ${oldName} &amp; ${newName}</small>`;
+                    } else {
+                        fileLine = `<small>File: ${data.filename}</small>`;
+                    }
+                    resultMessage.innerHTML = `<strong>✓ Success!</strong> Generated HTML with ${data.count} items<br>${fileLine}`;
+                    document.getElementById('resultButtonsOld').style.display = oldName ? 'flex' : 'none';
+                    document.getElementById('resultButtonsNew').style.display = newName ? 'flex' : 'none';
                 } else {
                     resultCard.className = 'result-card error';
                     resultMessage.innerHTML = `<strong>✗ Error:</strong> ${data.error}`;
+                    document.getElementById('resultButtonsOld').style.display = 'none';
+                    document.getElementById('resultButtonsNew').style.display = 'none';
                 }
             } catch (error) {
                 loading.style.display = 'none';
@@ -1360,6 +1456,14 @@
 
         function downloadHTML() {
             window.location.href = '/download-html';
+        }
+
+        function previewHTMLNew() {
+            window.open('/preview-html-new', '_blank');
+        }
+
+        function downloadHTMLNew() {
+            window.location.href = '/download-html-new';
         }
 
         // Theme Toggle Functionality
@@ -1564,36 +1668,38 @@
         let pendingEdit = null;
         let savingInProgress = false;
 
-        // Edit a single cell inline - click on name or value to edit just that cell
-        function editCellInline(cell, fieldType, itemName, itemValue) {
-            // If save is in progress, just queue the edit
+        // Edit a single cell inline — click any editable cell to edit it
+        function editCellInline(cell, fieldType) {
             if (savingInProgress) {
-                pendingEdit = { fieldType, itemName, itemValue };
+                pendingEdit = { fieldType, itemName: cell.closest('tr').dataset.name };
                 return;
             }
-
-            // If already editing, queue this edit and save current
             if (isEditing) {
-                pendingEdit = { fieldType, itemName, itemValue };
+                pendingEdit = { fieldType, itemName: cell.closest('tr').dataset.name };
                 savingInProgress = true;
-                // Force save current edit
-                const currentInput = document.querySelector('.inline-edit-input');
-                if (currentInput) {
-                    currentInput.blur();
-                }
+                const cur = document.querySelector('.inline-edit-input');
+                if (cur) cur.blur();
                 return;
             }
 
             isEditing = true;
-            const originalValue = fieldType === 'name' ? itemName : itemValue;
+            const row = cell.closest('tr');
+            const itemData = {
+                name: row.dataset.name || '',
+                value: row.dataset.value || '',
+                code: row.dataset.code || '',
+                tp: row.dataset.tp || '',
+                bonus: row.dataset.bonus || '',
+                tax: row.dataset.tax || '',
+                isExtended: row.dataset.extended === '1'
+            };
+            const originalValue = itemData[fieldType] || '';
 
-            // Create editable input using CSS class
             const nameAttrs = fieldType === 'name' ? ' autocapitalize="none" autocorrect="off" spellcheck="false"' : '';
             cell.innerHTML = `<input type="text" class="inline-edit-input"${nameAttrs} value="${escapeHtml(originalValue)}">`;
 
             const input = cell.querySelector('input');
             if (fieldType === 'name') {
-                // Stop clicks inside the input from bubbling to the cell's onclick
                 input.addEventListener('click', e => e.stopPropagation());
                 input.focus({ preventScroll: true });
                 input.setSelectionRange(input.value.length, input.value.length);
@@ -1602,86 +1708,50 @@
                 input.select();
             }
 
-            // Scroll main page so input stays visible above keyboard (inner container holds position)
             const scrollInputIntoView = () => {
                 const vv = window.visualViewport;
                 const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
                 const rect = input.getBoundingClientRect();
-                if (rect.bottom > visibleBottom - 20) {
+                if (rect.bottom > visibleBottom - 20)
                     window.scrollBy({ top: rect.bottom - (visibleBottom - 20), behavior: 'smooth' });
-                }
             };
-
             setTimeout(scrollInputIntoView, 100);
-
             if (window.visualViewport) {
-                const onKeyboardOpen = () => {
-                    scrollInputIntoView();
-                    window.visualViewport.removeEventListener('resize', onKeyboardOpen);
-                };
-                window.visualViewport.addEventListener('resize', onKeyboardOpen);
+                const onKb = () => { scrollInputIntoView(); window.visualViewport.removeEventListener('resize', onKb); };
+                window.visualViewport.addEventListener('resize', onKb);
             }
 
-            // Save on Enter, cancel on Escape
             input.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-
-                    // Apply formatting if this is a value field
-                    let formattedValue = input.value.trim();
+                    let v = input.value.trim();
                     if (fieldType === 'value') {
-                        if (/^\d+$/.test(formattedValue)) {
-                            // If it's just digits, add .00%
-                            formattedValue = formattedValue + '.00%';
-                        } else if (/^\d+\.\d+$/.test(formattedValue)) {
-                            // If it's number with decimal, ensure it ends with %
-                            if (!formattedValue.endsWith('%')) {
-                                formattedValue = formattedValue + '%';
-                            }
-                        }
+                        if (/^\d+$/.test(v)) v += '.00%';
+                        else if (/^\d+\.\d+$/.test(v) && !v.endsWith('%')) v += '%';
                     }
-
                     pendingEdit = null;
-                    saveCellEdit(fieldType, itemName, itemValue, formattedValue);
+                    saveCellEdit(fieldType, itemData, v);
                 } else if (e.key === 'Escape') {
-                    isEditing = false;
-                    pendingEdit = null;
-                    savingInProgress = false;
+                    isEditing = false; pendingEdit = null; savingInProgress = false;
                     updatePreview();
                 }
             });
 
             input.addEventListener('blur', function() {
-                // Format percentage value on blur if this is a value field
                 if (fieldType === 'value') {
-                    const currentValue = input.value.trim();
-                    if (/^\d+$/.test(currentValue)) {
-                        // If it's just digits, add .00%
-                        input.value = currentValue + '.00%';
-                    } else if (/^\d+\.\d+$/.test(currentValue)) {
-                        // If it's number with decimal, ensure it ends with %
-                        if (!currentValue.endsWith('%')) {
-                            input.value = currentValue + '%';
-                        }
-                    }
+                    const cv = input.value.trim();
+                    if (/^\d+$/.test(cv)) input.value = cv + '.00%';
+                    else if (/^\d+\.\d+$/.test(cv) && !cv.endsWith('%')) input.value = cv + '%';
                 }
-
                 setTimeout(() => {
-                    if (isEditing) {
-                        savingInProgress = true;
-                        saveCellEdit(fieldType, itemName, itemValue, input.value.trim());
-                    }
+                    if (isEditing) { savingInProgress = true; saveCellEdit(fieldType, itemData, input.value.trim()); }
                 }, 50);
             });
         }
 
         // Save single cell edit
-        function saveCellEdit(fieldType, originalName, originalValue, newValue) {
-            // Prevent double saves
-            if (!isEditing && !savingInProgress) {
-                return;
-            }
-
+        function saveCellEdit(fieldType, itemData, newValue) {
+            if (!isEditing && !savingInProgress) return;
             isEditing = false;
 
             if (fieldType === 'name' && !newValue) {
@@ -1692,30 +1762,40 @@
                 return;
             }
 
-            // Update the textarea
             const textarea = document.getElementById('editorTextarea');
-            let content = textarea.value;
+            const lines = textarea.value.split('\n');
 
-            // Find and replace the line
-            const lines = content.split('\n');
             for (let i = 0; i < lines.length; i++) {
-                if (lines[i].includes(originalName) && lines[i].includes('-----')) {
-                    if (fieldType === 'name') {
-                        lines[i] = `${newValue}----- ${originalValue}`;
-                    } else {
-                        lines[i] = `${originalName}----- ${newValue}`;
-                    }
-                    break;
+                const line = lines[i].trim();
+                if (!line.includes('-----')) continue;
+
+                // Parse to find matching name
+                let parsedName = '';
+                if (line.includes('|')) {
+                    const pp = line.split('|');
+                    const mid = pp[1] || '';
+                    const di = mid.indexOf('-----');
+                    parsedName = di >= 0 ? mid.substring(0, di).trim() : mid.trim();
+                } else {
+                    parsedName = line.split('-----')[0].trim();
                 }
+                if (parsedName !== itemData.name) continue;
+
+                // Apply edit
+                const u = Object.assign({}, itemData);
+                u[fieldType] = newValue;
+
+                if (u.isExtended) {
+                    lines[i] = `${u.code}|${u.name}----- ${u.value}|${u.tp}|${u.bonus}|${u.tax}`;
+                } else {
+                    lines[i] = `${u.name}----- ${u.value}`;
+                }
+                break;
             }
 
             textarea.value = lines.join('\n');
-
-            // Update item count and refresh preview
             updateItemCount();
             updatePreview();
-
-            // Reset flags and check for pending edit
             savingInProgress = false;
             checkPendingEdit();
         }
@@ -1723,27 +1803,14 @@
         // Check and execute pending edit by finding the cell in refreshed DOM
         function checkPendingEdit() {
             if (pendingEdit) {
-                const { fieldType, itemName, itemValue } = pendingEdit;
+                const { fieldType, itemName } = pendingEdit;
                 pendingEdit = null;
-
-                // Find the cell in the refreshed preview table
                 setTimeout(() => {
-                    const rows = document.querySelectorAll('#previewTableBody tr');
+                    const rows = document.querySelectorAll('#previewTableBody tr.item-row');
                     for (const row of rows) {
-                        const cells = row.querySelectorAll('td');
-                        // Skip header rows (single cell spanning multiple columns)
-                        if (cells.length < 3) continue;
-
-                        // Find the name and value cells
-                        const deleteCheckbox = document.getElementById('enableDeleteButtons');
-                        const offset = (deleteCheckbox && deleteCheckbox.checked) ? 1 : 0;
-
-                        const nameCell = cells[offset + 1];
-                        const valueCell = cells[offset + 2];
-
-                        if (nameCell && nameCell.textContent.trim() === itemName) {
-                            const targetCell = fieldType === 'name' ? nameCell : valueCell;
-                            editCellInline(targetCell, fieldType, itemName, itemValue);
+                        if (row.dataset.name === itemName) {
+                            const cell = row.querySelector(`[onclick*="editCellInline(this,'${fieldType}')"]`);
+                            if (cell) editCellInline(cell, fieldType);
                             break;
                         }
                     }
@@ -1753,46 +1820,20 @@
 
         // Delete a row from preview and update textarea
         function deleteRow(row) {
-            // Get the item details from the row
-            const cells = row.querySelectorAll('td');
-
-            // Check if delete button is enabled to determine column structure
-            const deleteCheckbox = document.getElementById('enableDeleteButtons');
-            const deleteEnabled = deleteCheckbox && deleteCheckbox.checked;
-
-            // Calculate offset: [delete?] # name value
-            let offset = deleteEnabled ? 1 : 0;
-
-            if (cells.length >= 3 + offset) {
-                const itemName = cells[offset + 1].textContent.trim();
-                const itemValue = cells[offset + 2].textContent.trim();
-
-                removeLineFromTextarea(itemName, itemValue);
-            }
+            const itemName = row.dataset.name || '';
+            if (itemName) removeLineFromTextarea(itemName);
         }
 
-        // Helper function to remove a line from textarea
-        function removeLineFromTextarea(itemName, itemValue) {
-            // Get current text content from textarea
+        // Helper function to remove a line from textarea by item name
+        function removeLineFromTextarea(itemName) {
             const textarea = document.getElementById('editorTextarea');
             let content = textarea.value;
-
-            // Create the line pattern to remove - match the exact format: "itemName----- itemValue"
-            // Use a more flexible pattern to handle whitespace
             const escapedName = escapeRegExp(itemName.trim());
-            const escapedValue = escapeRegExp(itemValue.trim());
-
-            // Match lines that have the item name followed by '-----' and then the value
-            const linePattern = new RegExp(`^[\\s]*${escapedName}[\\s]*-----[\\s]*${escapedValue}[\\s]*$`, 'gm');
-
-            // Remove the matching line(s)
+            // Matches both legacy "Name----- val" and extended "code|Name----- val|..."
+            const linePattern = new RegExp(`^(?:[^|\\n]*\\|)?\\s*${escapedName}\\s*-----.*$`, 'gm');
             content = content.replace(linePattern, '').trim();
-            content = content.replace(/^\s*[\r\n]+/gm, ''); // Clean up multiple empty lines
-
-            // Update textarea
+            content = content.replace(/^\s*[\r\n]+/gm, '');
             textarea.value = content;
-
-            // Update item count and preview
             updateItemCount();
             updatePreview();
         }
@@ -1831,8 +1872,8 @@
             // Sort items by name alphabetically (case-insensitive)
             items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
 
-            // Reconstruct the content
-            const sortedLines = items.map(item => `${item.name}----- ${item.value}`);
+            // Reconstruct the content (preserve original line to keep pipe/extended data)
+            const sortedLines = items.map(item => item.original);
             textarea.value = sortedLines.join('\n');
 
             // Update preview and item count

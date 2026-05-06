@@ -1559,6 +1559,14 @@
                         </label>
                         <small class="input-hint">Check this for new_pattern.htm style files (item-row layout)</small>
                     </div>
+                    <div class="input-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="extendedOutput">
+                            <span class="checkmark"></span>
+                            Extended TXT (with code | tp | bonus | tax)
+                        </label>
+                        <small class="input-hint">Off = legacy "Name----- Disc%" output. On = pipe-separated format needed by the Make-HTML "New" generator.</small>
+                    </div>
                     <button class="btn btn-primary" id="processBtn">🚀 Process File</button>
                 </div>
 
@@ -1720,6 +1728,7 @@
         const separatorValue = document.getElementById('separatorValue');
         const stockFormat = document.getElementById('stockFormat');
         const newFormat = document.getElementById('newFormat');
+        const extendedOutput = document.getElementById('extendedOutput');
         const processBtn = document.getElementById('processBtn');
         const fileCounter = document.getElementById('fileCounter');
 
@@ -1818,6 +1827,7 @@
             formData.append('separator', separatorValue.value);
             formData.append('stock_format', stockFormat.checked);
             formData.append('new_format', newFormat.checked);
+            formData.append('output_format', extendedOutput.checked ? 'extended' : 'old');
 
             try {
                 const response = await fetch('/upload', {
@@ -1889,6 +1899,21 @@
                             </div>
                             <button class="btn btn-small" onclick="refreshPreview(${fileCount})" style="padding: 4px 8px; font-size: 11px;">🔄 Refresh Preview</button>
                         </div>
+
+                        <!-- Columnar view of the parsed output -->
+                        <div id="columnView-${fileCount}" style="margin-top: 14px; display: none;">
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-size: 12px;">
+                                <strong>Show columns:</strong>
+                                <label><input type="checkbox" data-col="num"   checked onchange="renderColumnTable(${fileCount})"> #</label>
+                                <label><input type="checkbox" data-col="code"  checked onchange="renderColumnTable(${fileCount})"> Code</label>
+                                <label><input type="checkbox" data-col="name"  checked onchange="renderColumnTable(${fileCount})"> Name</label>
+                                <label><input type="checkbox" data-col="disc"  checked onchange="renderColumnTable(${fileCount})"> Disc</label>
+                                <label><input type="checkbox" data-col="bonus"        onchange="renderColumnTable(${fileCount})"> Bonus</label>
+                                <label><input type="checkbox" data-col="tp"           onchange="renderColumnTable(${fileCount})"> T.P</label>
+                                <label><input type="checkbox" data-col="tax"          onchange="renderColumnTable(${fileCount})"> Tax</label>
+                            </div>
+                            <div class="preview-content-main" id="columnTableWrap-${fileCount}"></div>
+                        </div>
                     </div>
 
                     <!-- Tabbed interface for editor/preview (same as make_html) -->
@@ -1952,6 +1977,14 @@
             resultsContainer.insertAdjacentHTML('beforeend', cardHtml);
             hideNewEditorSection();
 
+            // Initial render of the columnar view + auto-refresh on edit.
+            const _fc = fileCount;
+            const _ta = document.getElementById(`markdown-${_fc}`);
+            if (_ta) {
+                renderColumnTable(_fc);
+                _ta.addEventListener('input', () => renderColumnTable(_fc));
+            }
+
             // Check if max files reached
             if (fileCount >= maxFiles) {
                 uploadSection.classList.remove('show');
@@ -1972,6 +2005,7 @@
             separatorValue.value = '';
             stockFormat.checked = false;
             newFormat.checked = false;
+            extendedOutput.checked = false;
         }
 
         let editorCount = 0;
@@ -3187,6 +3221,92 @@
                 .replace(/>/g, "&gt;")
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
+        }
+
+        /* ===== Columnar output view (Old TXT + Extended TXT) ===== */
+
+        // Parse one TXT line into {code, name, disc, bonus, tp, tax}.
+        // Accepts both legacy "Name----- 5%," and extended "code|Name----- 5%|tp|bonus|tax".
+        function parseLineForColumns(line) {
+            line = line.trim();
+            if (!line) return null;
+            // Strip leading "N→ " arrow markers if present.
+            const arrow = line.indexOf('→');
+            if (arrow !== -1) line = line.slice(arrow + 1).trim();
+            // Strip trailing comma/semicolon separators (writer adds them).
+            while (line.endsWith(',') || line.endsWith(';')) line = line.slice(0, -1).trim();
+
+            let code = '', name = '', disc = '', bonus = '', tp = '', tax = '';
+            let nameValuePart = line;
+
+            if (line.includes('|')) {
+                const parts = line.split('|');
+                code = (parts[0] || '').trim();
+                nameValuePart = parts[1] || '';
+                tp    = (parts[2] || '').trim();
+                bonus = (parts[3] || '').trim();
+                tax   = (parts[4] || '').trim() || '0.00';
+            }
+
+            const sep = nameValuePart.indexOf('-----');
+            if (sep === -1) {
+                name = nameValuePart.trim();
+            } else {
+                name = nameValuePart.slice(0, sep).trim();
+                disc = nameValuePart.slice(sep + 5).trim();
+                while (disc.endsWith(',') || disc.endsWith(';')) disc = disc.slice(0, -1).trim();
+            }
+            return { code, name, disc, bonus, tp, tax };
+        }
+
+        // Render the column-table view for one result card.
+        function renderColumnTable(fileCount) {
+            const wrap = document.getElementById(`columnView-${fileCount}`);
+            const tableWrap = document.getElementById(`columnTableWrap-${fileCount}`);
+            const textarea = document.getElementById(`markdown-${fileCount}`);
+            if (!wrap || !tableWrap || !textarea) return;
+
+            const lines = textarea.value.split('\n').map(parseLineForColumns).filter(Boolean);
+            if (lines.length === 0) {
+                wrap.style.display = 'none';
+                return;
+            }
+            wrap.style.display = 'block';
+
+            // Read column-visibility checkboxes.
+            const checks = wrap.querySelectorAll('input[type="checkbox"][data-col]');
+            const visible = {};
+            checks.forEach(cb => { visible[cb.dataset.col] = cb.checked; });
+
+            const colDefs = [
+                { key: 'num',   header: '#',     cls: 'col-num' },
+                { key: 'code',  header: 'Code',  cls: 'col-value' },
+                { key: 'name',  header: 'Name',  cls: 'col-name' },
+                { key: 'disc',  header: 'Disc',  cls: 'col-value' },
+                { key: 'bonus', header: 'Bonus', cls: 'col-value' },
+                { key: 'tp',    header: 'T.P',   cls: 'col-value' },
+                { key: 'tax',   header: 'Tax',   cls: 'col-value' },
+            ];
+
+            let html = '<table><thead><tr>';
+            colDefs.forEach(c => {
+                if (visible[c.key]) html += `<th class="${c.cls}">${c.header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            lines.forEach((row, i) => {
+                html += '<tr>';
+                colDefs.forEach(c => {
+                    if (!visible[c.key]) return;
+                    let cell = '';
+                    if (c.key === 'num') cell = String(i + 1);
+                    else cell = row[c.key] || '';
+                    html += `<td class="${c.cls}">${escapeHtml(cell)}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            tableWrap.innerHTML = html;
         }
 
         // Refresh preview when textarea content changes
