@@ -669,7 +669,7 @@
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             padding: 15px;
-            max-height: 300px;
+            max-height: 520px;
             overflow-y: auto;
         }
 
@@ -1014,7 +1014,7 @@
                     </div>
                 </div>
 
-                <div id="colToggles" style="display:none; margin:8px 0; padding:8px 12px; background:#f0f4ff; border:1px solid #c8d8f0; border-radius:6px; font-size:12px; display:none; flex-wrap:wrap; gap:12px; align-items:center;">
+                <div id="colToggles" style="display:none; margin:8px 0; padding:8px 12px; background:#f0f4ff; border:1px solid #c8d8f0; border-radius:6px; font-size:12px; flex-wrap:wrap; gap:12px; align-items:center;">
                     <span style="font-weight:600; color:#333;">Columns:</span>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colNum" checked onchange="updatePreview()"> #</label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colCode" checked onchange="updatePreview()"> Code</label>
@@ -1022,6 +1022,7 @@
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colDisc" checked onchange="updatePreview()"> Disc%</label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colBonus" onchange="updatePreview()"> Bonus</label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colTp" onchange="updatePreview()"> T.P</label>
+                    <span id="extendedHint" style="display:none;font-size:11px;color:#888;margin-left:4px;">— fill to auto-extend</span>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colTax" onchange="updatePreview()"> Tax</label>
                 </div>
 
@@ -1213,12 +1214,16 @@
             uploadSection.style.display = 'none';
             editorSection.style.display = 'block';
             generateBtn.disabled = false;
+            showTab('preview');
         }
 
         function startMarkdown() {
-            editorTextarea.value = ''; // Start with empty editor
+            editorTextarea.value = '';
             editorTextarea.placeholder = 'Type your items here...\n\nFormat:\nItem Name----- 10%\nAnother Item----- 5%';
-            showEditor();
+            uploadSection.style.display = 'none';
+            editorSection.style.display = 'block';
+            generateBtn.disabled = false;
+            showTab('edit');
             editorTextarea.focus();
             updateItemCount();
         }
@@ -1238,14 +1243,18 @@
             const textarea = document.getElementById('editorTextarea');
             const preview = document.getElementById('previewContent');
 
+            tabEdit.classList.toggle('active', tab === 'edit');
+            tabPreview.classList.toggle('active', tab === 'preview');
+
+            const colToggles = document.getElementById('colToggles');
+
             if (tab === 'edit') {
-                tabEdit.classList.add('active');
-                tabPreview.classList.remove('active');
+                textarea.value = alignRawColumns(stripRawSpaces(textarea.value));
                 textarea.style.display = 'block';
                 preview.style.display = 'none';
+                if (colToggles) colToggles.style.display = 'none';
             } else {
-                tabEdit.classList.remove('active');
-                tabPreview.classList.add('active');
+                textarea.value = stripRawSpaces(textarea.value);
                 textarea.style.display = 'none';
                 preview.style.display = 'block';
                 updatePreview();
@@ -1305,7 +1314,15 @@
 
             const hasExtended = items.some(it => it.isExtended);
             const colToggles = document.getElementById('colToggles');
-            if (colToggles) colToggles.style.display = hasExtended ? 'flex' : 'none';
+            if (colToggles) colToggles.style.display = items.length > 0 ? 'flex' : 'none';
+
+            // Show/hide Code and Tax toggles (extended-only columns)
+            ['colCode','colTax'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.closest('label').style.display = hasExtended ? '' : 'none';
+            });
+            const hint = document.getElementById('extendedHint');
+            if (hint) hint.style.display = (!hasExtended && items.length > 0) ? 'inline' : 'none';
 
             const chk = id => { const el = document.getElementById(id); return !el || el.checked; };
             const vis = {
@@ -1313,8 +1330,8 @@
                 code:  hasExtended && chk('colCode'),
                 name:  chk('colName'),
                 disc:  chk('colDisc'),
-                bonus: hasExtended && chk('colBonus'),
-                tp:    hasExtended && chk('colTp'),
+                bonus: chk('colBonus'),
+                tp:    chk('colTp'),
                 tax:   hasExtended && chk('colTax'),
             };
 
@@ -1499,26 +1516,9 @@
         function loadTransferredContent() {
             const transferredContent = localStorage.getItem('transferredContent');
             if (transferredContent) {
-                // Make sure the editor section is visible first
-                document.getElementById('uploadSection').style.display = 'none';
-                document.getElementById('editorSection').style.display = 'block';
-                document.getElementById('generateBtn').disabled = false;
-
-                // Set the content in the editor
                 document.getElementById('editorTextarea').value = transferredContent;
-
-                // Update item count and preview
-                updateItemCount();
-                updatePreview();
-
-                // Store the content in session storage with timestamp for 20 minute retention
-                const sessionData = {
-                    content: transferredContent,
-                    timestamp: Date.now()
-                };
-                sessionStorage.setItem('sessionContent', JSON.stringify(sessionData));
-
-                // Clear the transferred content to avoid it persisting
+                showEditor();
+                sessionStorage.setItem('sessionContent', JSON.stringify({ content: transferredContent, timestamp: Date.now() }));
                 localStorage.removeItem('transferredContent');
             }
         }
@@ -1529,28 +1529,14 @@
             if (sessionDataJSON) {
                 try {
                     const sessionData = JSON.parse(sessionDataJSON);
-                    const currentTime = Date.now();
-                    const twentyMinutes = 20 * 60 * 1000; // 20 minutes in milliseconds
-
-                    // Check if the session data is still valid (less than 20 minutes old)
-                    if (currentTime - sessionData.timestamp < twentyMinutes) {
-                        // Make sure the editor section is visible first
-                        document.getElementById('uploadSection').style.display = 'none';
-                        document.getElementById('editorSection').style.display = 'block';
-                        document.getElementById('generateBtn').disabled = false;
-
-                        // Set the content in the editor
+                    const twentyMinutes = 20 * 60 * 1000;
+                    if (Date.now() - sessionData.timestamp < twentyMinutes) {
                         document.getElementById('editorTextarea').value = sessionData.content;
-
-                        // Update item count and preview
-                        updateItemCount();
-                        updatePreview();
+                        showEditor();
                     } else {
-                        // Session expired, remove the old data
                         sessionStorage.removeItem('sessionContent');
                     }
                 } catch (e) {
-                    console.error('Error parsing session data:', e);
                     sessionStorage.removeItem('sessionContent');
                 }
             }
@@ -1785,7 +1771,8 @@
                 const u = Object.assign({}, itemData);
                 u[fieldType] = newValue;
 
-                if (u.isExtended) {
+                // Auto-upgrade to extended if bonus or tp is now set
+                if (u.isExtended || u.bonus || u.tp) {
                     lines[i] = `${u.code}|${u.name}----- ${u.value}|${u.tp}|${u.bonus}|${u.tax}`;
                 } else {
                     lines[i] = `${u.name}----- ${u.value}`;
@@ -1843,40 +1830,83 @@
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
 
+        // Strip aligned spaces back to compact pipe format
+        function stripRawSpaces(text) {
+            return text.split('\n').map(line => {
+                if (!line.trim() || !line.includes('|')) return line;
+                return line.split('|').map(p => p.trim()).join('|');
+            }).join('\n');
+        }
+
+        // Align pipe-delimited columns to same width
+        function alignRawColumns(text) {
+            const lines = text.split('\n');
+            const parsed = lines.map(line => {
+                if (!line.trim() || !line.includes('|')) return { raw: line, parts: null };
+                return { raw: line, parts: line.split('|').map(p => p.trim()) };
+            });
+
+            let maxCode = 0, maxMid = 0;
+            parsed.forEach(({ parts }) => {
+                if (!parts) return;
+                maxCode = Math.max(maxCode, (parts[0] || '').length);
+                maxMid  = Math.max(maxMid,  (parts[1] || '').length);
+            });
+
+            return parsed.map(({ raw, parts }) => {
+                if (!parts) return raw;
+                const code = (parts[0] || '').padEnd(maxCode);
+                const mid  = (parts[1] || '').padEnd(maxMid + 12);
+                const tp    = parts[2] || '';
+                const bonus = parts[3] || '';
+                const tax   = parts[4] || '';
+                return `${code} | ${mid} | ${tp} | ${bonus} | ${tax}`;
+            }).join('\n');
+        }
+
+        // Toggle raw textarea view
+        function toggleRawEdit() {
+            const ta = document.getElementById('editorTextarea');
+            const preview = document.getElementById('previewContent');
+            const btn = document.getElementById('rawToggleBtn');
+            const isRaw = ta.dataset.rawMode === '1';
+            if (isRaw) {
+                // Strip display spaces before going back to table
+                ta.value = ta.value.split('\n').map(line => {
+                    if (!line.trim() || !line.includes('|')) return line;
+                    return line.split('|').map(p => p.trim()).join('|');
+                }).join('\n');
+                ta.dataset.rawMode = '';
+                ta.style.display = 'none';
+                preview.style.display = 'block';
+                if (btn) { btn.style.background = ''; btn.style.color = ''; }
+                updatePreview();
+            } else {
+                // Add spaces around | for readability
+                ta.value = ta.value.split('\n').map(line => {
+                    if (!line.trim() || !line.includes('|')) return line;
+                    return line.split('|').map(p => p.trim()).join(' | ');
+                }).join('\n');
+                ta.dataset.rawMode = '1';
+                ta.style.display = 'block';
+                preview.style.display = 'none';
+                if (btn) { btn.style.background = '#0d6efd'; btn.style.color = 'white'; }
+                updateItemCount();
+            }
+        }
+
         // Sort items alphabetically in the editor
         function sortAlphabetically() {
             const textarea = document.getElementById('editorTextarea');
             if (!textarea) return;
-
-            let content = textarea.value.trim();
+            const content = textarea.value.trim();
             if (!content) return;
 
-            // Split content into lines
-            let lines = content.split('\n');
+            // parseItems correctly extracts name from pipe format and sorts by name
+            const items = parseItems(content);
+            if (!items.length) return;
 
-            // Filter out empty lines
-            lines = lines.filter(line => line.trim() !== '');
-
-            // Parse each line to extract name and value
-            const items = [];
-            for (const line of lines) {
-                if (line.includes('-----')) {
-                    const parts = line.split('-----');
-                    const name = parts[0].trim();
-                    let value = parts[1] ? parts[1].trim() : '';
-                    // Preserve the value with any separator (comma, etc.)
-                    items.push({ name, value, original: line });
-                }
-            }
-
-            // Sort items by name alphabetically (case-insensitive)
-            items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
-
-            // Reconstruct the content (preserve original line to keep pipe/extended data)
-            const sortedLines = items.map(item => item.original);
-            textarea.value = sortedLines.join('\n');
-
-            // Update preview and item count
+            textarea.value = items.map(item => item.original).join('\n');
             updateItemCount();
             updatePreview();
         }
