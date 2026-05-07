@@ -1216,6 +1216,27 @@ window.addEventListener('DOMContentLoaded', function(){
       localStorage.setItem(tsKey, String(Date.now()));
     }
   });
+  // Customer name persistence
+  var CUST_KEY = 'anas_last_customer';
+  var fldMain  = document.getElementById('fldName');
+  var fldPanel = document.getElementById('fldNamePanel');
+
+  function restoreCust(){
+    var saved = localStorage.getItem(CUST_KEY);
+    if (!saved) return;
+    if (fldMain)  fldMain.value  = saved;
+    if (fldPanel) fldPanel.value = saved;
+  }
+
+  function syncCust(val){
+    localStorage.setItem(CUST_KEY, val);
+    if (fldMain  && fldMain  !== document.activeElement) fldMain.value  = val;
+    if (fldPanel && fldPanel !== document.activeElement) fldPanel.value = val;
+  }
+
+  restoreCust();
+  if (fldMain)  fldMain.addEventListener('input',  function(){ syncCust(this.value); });
+  if (fldPanel) fldPanel.addEventListener('input', function(){ syncCust(this.value); });
 })();
 </script>
 </body>

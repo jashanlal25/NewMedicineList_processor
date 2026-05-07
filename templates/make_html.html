@@ -1793,6 +1793,19 @@
             updateItemCount();
             updatePreview();
             savingInProgress = false;
+
+            // On mobile the keyboard closing shifts viewport — scroll saved row back into view
+            const savedName = itemData.name;
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#previewTableBody tr.item-row');
+                for (const row of rows) {
+                    if (row.dataset.name === savedName) {
+                        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        break;
+                    }
+                }
+            }, 200);
+
             checkPendingEdit();
         }
 
