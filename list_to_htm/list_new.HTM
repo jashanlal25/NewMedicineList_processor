@@ -694,6 +694,8 @@ table.table-fixed tbody td:nth-child(2){
 var OFFLINE_META = {
   offerId: "000032",
   shopTitle: "MEDICOS                           ",
+  message: "__MSG_PLACEHOLDER__",
+  qtyExpireHours: __QTY_EXPIRE__,
   shopAddr: "                                                                                 ",
   chips: ["OFFER LIST", "                              ", "                              "]
 };
@@ -890,6 +892,7 @@ var bonus = String(r.getAttribute("data-bonus") || "").trim(); // bonus as strin
   return {
     offerId: OFFER_ID,
     shopTitle: OFFLINE_META.shopTitle || "",
+    message: OFFLINE_META.message || "",
     customerName: cust,
     totalItems: lines.length,
     netTotal: Number(fmt2(net)),
@@ -986,6 +989,7 @@ if (btnPrepare){
         '@media print{@page{margin:15mm}button{display:none}}' +
       '</style></head><body>' +
       '<h1>' + payload.shopTitle + '</h1>' +
+      (payload.message ? '<p style="margin:4px 0 10px;font-size:13px;color:#555;font-style:italic;">'+payload.message+'</p>' : '') +
       '<div class="meta">' +
         'Date: ' + dateStr + '<br>' +
         'Total Items: ' + payload.totalItems + '<br>' +
@@ -1013,14 +1017,42 @@ if (btnPrepare){
     setTimeout(function(){ w.print(); }, 400);
   }
 
+  function localPreview(){
+    var payload = buildOrderPayload();
+    if (!payload) return;
+    var now = new Date();
+    var pad = function(n){ return String(n).padStart(2,'0'); };
+    var dateStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    var rows = '';
+    for (var i = 0; i < payload.items.length; i++){
+      var it = payload.items[i];
+      var taxDisp = it.tax > 0 ? it.tax.toFixed(2) : '&mdash;';
+      rows += '<tr><td>' + it.code + '</td><td class="col-name">' + it.name + '</td><td class="r">' + it.qty + '</td><td class="r">' + it.tp.toFixed(2) + '</td><td class="r">' + it.disc.toFixed(2) + '</td><td class="r">' + taxDisp + '</td><td class="r">' + it.lineNet.toFixed(2) + '</td></tr>';
+    }
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preview Order</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#000;font-size:13px}h1{font-size:22px;font-weight:bold;margin:0 0 4px}.msg{font-size:13px;color:#555;font-style:italic;margin:0 0 10px}.meta{font-size:12px;margin-bottom:14px;line-height:1.6}table{width:100%;border-collapse:collapse}th{background:#dce8f7;color:#1a3a5c;padding:7px 9px;text-align:left;border:1px solid #b8d0ea;font-size:12px;font-weight:600}td{padding:5px 9px;border:1px solid #ddd;font-size:12px;vertical-align:middle}.r{text-align:right}.col-name{max-width:240px;word-break:break-word}tfoot td{font-weight:bold;border-top:2px solid #333;background:#f7f7f7}</style></head><body>' +
+      '<h1>' + payload.shopTitle + '</h1>' +
+      (payload.message ? '<p class="msg">' + payload.message + '</p>' : '') +
+      '<div class="meta">Date: ' + dateStr + '<br>Total Items: ' + payload.totalItems + '<br><b>Name: ' + (payload.customerName || '&mdash;') + '</b></div>' +
+      '<table><thead><tr><th>Code</th><th>Item</th><th class="r">Qty</th><th class="r">TP</th><th class="r">Disc%</th><th class="r">Tax</th><th class="r">Net</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><td colspan="6" class="r">Total</td><td class="r">' + payload.netTotal.toFixed(2) + '</td></tr></tfoot></table></body></html>';
+    var w = window.open('', '_blank');
+    if (!w){ alert('Popup blocked. Please allow popups.'); return; }
+    w.document.write(html);
+    w.document.close();
+  }
+
   window.addEventListener('load', function(){
     var btn = document.getElementById('pdfBtn');
     if (!btn) return;
     var newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.addEventListener('click', function(e){
-      e.preventDefault();
-      localPdf();
+    newBtn.addEventListener('click', function(e){ e.preventDefault(); localPdf(); });
+
+    ['previewBtn','previewBtnP'].forEach(function(id){
+      var pb = document.getElementById(id);
+      if (!pb) return;
+      var npb = pb.cloneNode(true);
+      pb.parentNode.replaceChild(npb, pb);
+      npb.addEventListener('click', function(e){ e.preventDefault(); localPreview(); });
     });
   });
 })();
@@ -1161,6 +1193,29 @@ window.addEventListener('DOMContentLoaded', function(){
     if (el) observer.observe(el, { childList:true, characterData:true, subtree:true });
   });
 });
+</script>
+<script>
+(function(){
+  var EXPIRE_MS = 10 * 3600 * 1000; // 10 hours
+  var tsKey = LS_KEY_QTY + ':ts';
+
+  // On load: if saved qty is older than 10h, wipe it
+  window.addEventListener('load', function(){
+    var saved = localStorage.getItem(tsKey);
+    if (saved && (Date.now() - parseInt(saved)) > EXPIRE_MS){
+      localStorage.removeItem(LS_KEY_QTY);
+      localStorage.removeItem(tsKey);
+      document.querySelectorAll('input.qty-input').forEach(function(i){ i.value = ''; });
+    }
+  });
+
+  // On any qty change: update timestamp
+  document.addEventListener('input', function(e){
+    if (e.target && e.target.classList.contains('qty-input')){
+      localStorage.setItem(tsKey, String(Date.now()));
+    }
+  });
+})();
 </script>
 </body>
 </html>

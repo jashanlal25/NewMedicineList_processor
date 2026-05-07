@@ -596,11 +596,18 @@ def generate_html_new_format(template_path, items_extended, list_no="000001",
     content = content.replace('<strong>SSD MEDICOS</strong>', f'<strong>{title}</strong>' if title.strip() else '')
 
     # Custom message below offer list title
-    if message and message.strip():
-        msg_html = f'<div style="text-align:center;padding:6px 16px;font-size:14px;color:#555;font-style:italic;">{message.strip()}</div>'
+    msg = message.strip() if message else ''
+    if msg:
+        msg_html = f'<div style="text-align:center;padding:6px 16px;font-size:14px;color:#555;font-style:italic;">{msg}</div>'
     else:
         msg_html = ''
     content = content.replace('<!--MESSAGE_PLACEHOLDER-->', msg_html)
+
+    # Message in OFFLINE_META for JS (preview & PDF)
+    content = content.replace('__MSG_PLACEHOLDER__', msg.replace('"', '&quot;').replace("'", "\\'"))
+
+    # Qty expiry — fixed 10 hours
+    content = content.replace('__QTY_EXPIRE__', '10')
 
     # WhatsApp number — both the hidden input and the JS fallback use the same string.
     content = content.replace('+03112127664 ', whatsapp_number)
