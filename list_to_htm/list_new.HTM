@@ -576,7 +576,7 @@ table.table-fixed tbody td:nth-child(2){
       </div>
 
       <div class="shopbox">
-<h1 class="shopname">SSD MEDICO                           </h1>
+<h1 class="shopname" id="shopTitle">SSD MEDICO                           </h1>
         <div class="addr" >
                                         <br>                                        
 </div>
@@ -951,103 +951,220 @@ if (btnPrepare){
 <script src="https://anas-system.com/anassystemnewoffer.js"></script>
 <script>
 (function(){
-  function localPdf(){
-    var payload = buildOrderPayload();
-    if (!payload) return;
-
+  function buildPdfContent(payload){
     var now = new Date();
     var pad = function(n){ return String(n).padStart(2,'0'); };
     var dateStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
                   ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
+    function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function fN(n){ var x=parseFloat(n); if(!isFinite(x)) return '0.00'; return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function fD(n){ var x=parseFloat(n); return (!isFinite(x)||x===0)?'&mdash;':x.toFixed(2); }
+    function fB(s){ var t=String(s==null?'':s).trim(); if(!t) return '&mdash;'; var l=t.replace(/\s+/g,'').toLowerCase(); return (l==='0'||l==='0.0'||l==='0.00')?'&mdash;':esc(t); }
+    function fT(n){ var x=parseFloat(n); return (!isFinite(x)||x===0)?'&mdash;':x.toFixed(2); }
+
     var rows = '';
-    for (var i = 0; i < payload.items.length; i++){
+    for (var i=0; i<payload.items.length; i++){
       var it = payload.items[i];
-      var taxDisp = it.tax > 0 ? it.tax.toFixed(2) : '&mdash;';
       rows += '<tr>' +
-        '<td>' + it.code + '</td>' +
-        '<td class="col-name">' + it.name + '</td>' +
-        '<td class="r">' + it.qty + '</td>' +
-        '<td class="r">' + it.tp.toFixed(2) + '</td>' +
-        '<td class="r">' + it.disc.toFixed(2) + '</td>' +
-        '<td class="r">' + taxDisp + '</td>' +
-        '<td class="r">' + it.lineNet.toFixed(2) + '</td>' +
+        '<td>' + esc(it.code) + '</td>' +
+        '<td class="nm">' + esc(it.name) + '</td>' +
+        '<td class="r">' + (parseInt(it.qty,10)||0) + '</td>' +
+        '<td class="r">' + fN(it.tp) + '</td>' +
+        '<td class="r">' + fD(it.disc) + '</td>' +
+        '<td class="r">' + fB(it.bonus) + '</td>' +
+        '<td class="r">' + fT(it.tax) + '</td>' +
+        '<td class="r">' + fN(it.lineNet) + '</td>' +
         '</tr>';
     }
 
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
-      '<title>' + payload.shopTitle + '</title>' +
-      '<style>' +
-        'body{font-family:Arial,sans-serif;margin:24px;color:#000;font-size:13px}' +
-        'h1{font-size:22px;font-weight:bold;margin:0 0 6px}' +
-        '.meta{font-size:12px;margin-bottom:14px;line-height:1.6}' +
-        'table{width:100%;border-collapse:collapse}' +
-        'th{background:#dce8f7;color:#1a3a5c;padding:7px 9px;text-align:left;border:1px solid #b8d0ea;font-size:12px;font-weight:600;letter-spacing:.4px}' +
-        'td{padding:5px 9px;border:1px solid #ddd;font-size:12px;vertical-align:middle}' +
-        '.r{text-align:right}' +
-        '.col-name{max-width:240px;word-break:break-word}' +
-        'tfoot td{font-weight:bold;border-top:2px solid #333;background:#f7f7f7}' +
-        '@media print{@page{margin:15mm}button{display:none}}' +
-      '</style></head><body>' +
-      '<h1>' + payload.shopTitle + '</h1>' +
-      (payload.message ? '<p style="margin:4px 0 10px;font-size:13px;color:#555;font-style:italic;">'+payload.message+'</p>' : '') +
-      '<div class="meta">' +
-        'Date: ' + dateStr + '<br>' +
-        'Total Items: ' + payload.totalItems + '<br>' +
-        '<b>Name: ' + (payload.customerName || '&mdash;') + '</b>' +
-      '</div>' +
-      '<table>' +
-        '<thead><tr>' +
-          '<th>Code</th><th>Item</th><th class="r">Qty</th>' +
-          '<th class="r">TP</th><th class="r">Disc%</th>' +
-          '<th class="r">Tax</th><th class="r">Net</th>' +
-        '</tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-        '<tfoot><tr>' +
-          '<td colspan="6" class="r">Total</td>' +
-          '<td class="r">' + payload.netTotal.toFixed(2) + '</td>' +
-        '</tr></tfoot>' +
-      '</table>' +
-      '</body></html>';
+    return '<style>' +
+      '*{box-sizing:border-box;margin:0;padding:0}' +
+      'body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#fff}' +
+      '.shop{font-size:18px;font-weight:bold;margin-bottom:3px}' +
+      '.msg{font-size:11px;color:#555;font-style:italic;margin:3px 0 5px}' +
+      '.meta{font-size:10px;color:#444;line-height:1.8;margin-bottom:12px}' +
+      '.meta b{color:#000;font-weight:bold}' +
+      'table{width:100%;border-collapse:collapse;font-size:10px}' +
+      'th{padding:6px 8px;border:1px solid #ccc;background:#f5f5f5;font-weight:bold;text-align:left;color:#000}' +
+      'td{padding:5px 8px;border:1px solid #ddd;color:#000;vertical-align:top}' +
+      '.nm{white-space:normal;word-break:break-word}' +
+      '.r{text-align:right}' +
+      'tr.foot td{border-top:2px solid #999;font-weight:bold;background:#f5f5f5}' +
+      '</style>' +
+      '<div class="shop">' + esc(payload.shopTitle.trim()) + '</div>' +
+      (payload.message ? '<div class="msg">' + esc(payload.message) + '</div>' : '') +
+      '<div class="meta">Date: ' + dateStr + '<br>Total Items: ' + payload.totalItems + '<br><b>Name: ' + esc(payload.customerName || '—') + '</b></div>' +
+      '<table><thead><tr>' +
+        '<th>Code</th><th>Item</th><th class="r">Qty</th><th class="r">TP</th>' +
+        '<th class="r">Disc%</th><th class="r">Bonus</th><th class="r">Tax</th><th class="r">Net</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody>' +
+      '<tfoot><tr class="foot"><td colspan="7" class="r">Total</td><td class="r">' + fN(payload.netTotal) + '</td></tr></tfoot>' +
+      '</table>';
+  }
 
-    var w = window.open('', '_blank');
-    if (!w){ alert("Popup blocked. Please allow popups in your browser."); return; }
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(function(){ w.print(); }, 400);
+  function localPdf(){
+    var payload = buildOrderPayload();
+    if (!payload) return;
+    var filename = payload.shopTitle.trim().replace(/\s+/g,'_') + '_' + payload.offerId + '.pdf';
+    var content = buildPdfContent(payload);
+    var html =
+      '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      '<script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"><\/script>' +
+      '</head><body style="margin:0;padding:0;background:#fff;">' +
+      '<div id="pg" style="width:794px;padding:36px 48px;background:#fff;font-family:Arial,sans-serif;">' +
+        content +
+      '</div>' +
+      '<script>window.onload=function(){' +
+        'html2pdf().set({' +
+          'filename:"' + filename.replace(/\\/g,'\\\\').replace(/"/g,'\\"') + '",' +
+          'margin:0,' +
+          'html2canvas:{scale:2,backgroundColor:"#fff",logging:false,useCORS:true,width:794},' +
+          'jsPDF:{unit:"px",format:[794,1123],orientation:"portrait"}' +
+        '}).from(document.getElementById("pg")).save()' +
+        '.then(function(){setTimeout(function(){window.close();},300);});' +
+      '}<\/script>' +
+      '</body></html>';
+    var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var w = window.open(url, '_blank');
+    if (!w){ alert('Popup blocked. Please allow popups.'); URL.revokeObjectURL(url); return; }
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
+  }
+  window.localPdf = localPdf;
+
+  function fmtRound2(v){
+    var n = parseFloat(v);
+    if (!isFinite(n)) n = 0;
+    n = Math.round(n);
+    return n.toFixed(2);
   }
 
   function localPreview(){
     var payload = buildOrderPayload();
     if (!payload) return;
-    var now = new Date();
-    var pad = function(n){ return String(n).padStart(2,'0'); };
-    var dateStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-    var rows = '';
-    for (var i = 0; i < payload.items.length; i++){
+
+    function num0(x){ var n = parseFloat(x); return isFinite(n) ? n : 0; }
+    function int0(x){ var n = parseInt(x,10); return isFinite(n) ? n : 0; }
+    function strTrim(x){ return String(x==null ? "" : x).trim(); }
+    function hasAny(fn){ for(var i=0;i<payload.items.length;i++){ if(fn(payload.items[i])) return true; } return false; }
+
+    var showQty   = hasAny(function(it){ return int0(it.qty) > 0; });
+    var showDisc  = hasAny(function(it){ return num0(it.disc) > 0; });
+    var showBonus = hasAny(function(it){
+      var s = strTrim(it.bonus);
+      if (s === "") return false;
+      var t = s.replace(/\s+/g,'').toLowerCase();
+      return !(t==="0"||t==="0.0"||t==="0.00");
+    });
+    var showTP    = hasAny(function(it){ return num0(it.tp) > 0; });
+    var showTax   = hasAny(function(it){ return num0(it.tax) > 0; });
+
+    var headHtml =
+      "<th>#</th><th>Code</th><th>Item</th>" +
+      (showQty   ? "<th style='text-align:right'>Qty</th>"   : "") +
+      (showDisc  ? "<th style='text-align:right'>Disc</th>"  : "") +
+      (showBonus ? "<th style='text-align:right'>Bonus</th>" : "") +
+      (showTP    ? "<th style='text-align:right'>TP</th>"    : "") +
+      (showTax   ? "<th style='text-align:right'>Tax</th>"   : "") +
+      "<th style='text-align:right'>Line Net</th>";
+
+    var rowsHtml = "";
+    for (var i=0; i<payload.items.length; i++){
       var it = payload.items[i];
-      var taxDisp = it.tax > 0 ? it.tax.toFixed(2) : '&mdash;';
-      rows += '<tr><td>' + it.code + '</td><td class="col-name">' + it.name + '</td><td class="r">' + it.qty + '</td><td class="r">' + it.tp.toFixed(2) + '</td><td class="r">' + it.disc.toFixed(2) + '</td><td class="r">' + taxDisp + '</td><td class="r">' + it.lineNet.toFixed(2) + '</td></tr>';
+      rowsHtml += "<tr>";
+      rowsHtml += "<td>" + (i+1) + "</td>";
+      rowsHtml += "<td>" + escapeHtml(it.code) + "</td>";
+      rowsHtml += "<td style='font-weight:400;white-space:normal;'>" + escapeHtml(it.name) + "</td>";
+      if (showQty)   rowsHtml += "<td style='text-align:right'>" + int0(it.qty) + "</td>";
+      if (showDisc)  rowsHtml += "<td style='text-align:right'>" + fmt2(it.disc) + "%</td>";
+      if (showBonus) rowsHtml += "<td style='text-align:right'>" + escapeHtml(it.bonus) + "</td>";
+      if (showTP)    rowsHtml += "<td style='text-align:right'>" + fmt2(it.tp) + "</td>";
+      if (showTax)   rowsHtml += "<td style='text-align:right'>" + fmt2(it.tax) + "</td>";
+      rowsHtml += "<td style='text-align:right;font-weight:900'>" + fmt2(it.lineNet) + "</td>";
+      rowsHtml += "</tr>";
     }
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preview Order</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#000;font-size:13px}h1{font-size:22px;font-weight:bold;margin:0 0 4px}.msg{font-size:13px;color:#555;font-style:italic;margin:0 0 10px}.meta{font-size:12px;margin-bottom:14px;line-height:1.6}table{width:100%;border-collapse:collapse}th{background:#dce8f7;color:#1a3a5c;padding:7px 9px;text-align:left;border:1px solid #b8d0ea;font-size:12px;font-weight:600}td{padding:5px 9px;border:1px solid #ddd;font-size:12px;vertical-align:middle}.r{text-align:right}.col-name{max-width:240px;word-break:break-word}tfoot td{font-weight:bold;border-top:2px solid #333;background:#f7f7f7}</style></head><body>' +
-      '<h1>' + payload.shopTitle + '</h1>' +
-      (payload.message ? '<p class="msg">' + payload.message + '</p>' : '') +
-      '<div class="meta">Date: ' + dateStr + '<br>Total Items: ' + payload.totalItems + '<br><b>Name: ' + (payload.customerName || '&mdash;') + '</b></div>' +
-      '<table><thead><tr><th>Code</th><th>Item</th><th class="r">Qty</th><th class="r">TP</th><th class="r">Disc%</th><th class="r">Tax</th><th class="r">Net</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><td colspan="6" class="r">Total</td><td class="r">' + payload.netTotal.toFixed(2) + '</td></tr></tfoot></table></body></html>';
-    var w = window.open('', '_blank');
-    if (!w){ alert('Popup blocked. Please allow popups.'); return; }
-    w.document.write(html);
-    w.document.close();
+
+    var msgHtml = payload.message
+      ? "<div style='padding:6px 14px 10px;font-size:13px;color:#55617a;font-style:italic;border-bottom:1px solid rgba(8,20,60,.10);'>" + escapeHtml(payload.message) + "</div>"
+      : "";
+
+    var html =
+"<!doctype html><html><head><meta charset='utf-8'>" +
+"<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+"<title>Order Preview</title>" +
+"<style>" +
+"*{box-sizing:border-box}" +
+"html,body{height:100%}" +
+"body{margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background:#f3f6ff;color:#0b1220}" +
+".wrap{padding:14px}" +
+".card{background:#fff;border:1px solid rgba(8,20,60,.16);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.10);overflow:hidden}" +
+".head{padding:12px 14px;border-bottom:1px solid rgba(8,20,60,.16);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}" +
+".title{font-weight:900;font-size:18px;line-height:1.15}" +
+".sub{color:#55617a;font-size:13px;line-height:1.25}" +
+".btn{border:1px solid rgba(8,20,60,.16);background:#eaf0ff;border-radius:12px;padding:8px 12px;cursor:pointer;font-weight:800}" +
+".pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(8,20,60,.16);background:#f3f6ff;border-radius:999px;padding:6px 10px;font-weight:800;white-space:nowrap}" +
+".scroller{max-height:70vh;overflow:auto;-webkit-overflow-scrolling:touch}" +
+".scroller table{width:max-content;min-width:100%;border-collapse:collapse}" +
+"table{border-collapse:collapse}" +
+"thead th{background:#f7f9ff;color:#5d6e90;padding:8px 10px;border-bottom:1px solid rgba(8,20,60,.16);font-size:12px;text-align:left;white-space:nowrap}" +
+"tbody td{padding:8px 10px;border-bottom:1px solid rgba(8,20,60,.16);font-size:13px;vertical-align:top;white-space:nowrap}" +
+"tbody td:nth-child(3){white-space:normal;word-break:break-word}" +
+".footer{padding:10px 14px;border-top:1px solid rgba(8,20,60,.16);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}" +
+".footer .pill{margin:0}" +
+"@media (max-width:480px){" +
+".wrap{padding:10px}.card{border-radius:12px}.head{padding:10px 12px;flex-direction:column;align-items:stretch}" +
+".title{font-size:16px}.sub{font-size:12px}.pill{padding:6px 9px;font-size:12px}.btn{width:100%;padding:10px 12px}" +
+"thead th{padding:7px 8px;font-size:11px}tbody td{padding:7px 8px;font-size:12px}.footer{padding:8px 12px}}" +
+"</style></head><body>" +
+"<div class='wrap'><div class='card'>" +
+  "<div class='head'>" +
+    "<div><div class='title'>Order Preview</div>" +
+    "<div class='sub'>Customer: <b>" + escapeHtml(payload.customerName) + "</b> &bull; Offer: <b>" + escapeHtml(String(payload.offerId)) + "</b></div></div>" +
+    "<div style='display:flex;gap:8px;flex-wrap:wrap'>" +
+      "<button class='btn' onclick='downloadPdf()'>PDF</button>" +
+      "<button class='btn' onclick='window.close()'>Close</button>" +
+    "</div>" +
+  "</div>" +
+  msgHtml +
+  "<div class='scroller'><table>" +
+    "<thead><tr>" + headHtml + "</tr></thead>" +
+    "<tbody>" + rowsHtml + "</tbody>" +
+  "</table></div>" +
+  "<div class='footer'>" +
+    "<span class='pill'>Items: <b>" + payload.totalItems + "</b></span>" +
+    "<span class='pill'>Net: <b>" + fmtRound2(payload.netTotal) + "</b></span>" +
+  "</div>" +
+"</div></div>" +
+"<script>" +
+"var PAYLOAD=" + JSON.stringify(payload).replace(/</g,"\\u003c") + ";" +
+"var DATE_STR='" + (function(){ var n=new Date(),p=function(x){return String(x).padStart(2,'0')}; return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes()); })() + "';" +
+"function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}" +
+"function fmtN(n){var x=parseFloat(n);if(!isFinite(x))return '0.00';return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}" +
+"function fmtDisc(n){var x=parseFloat(n);return(!isFinite(x)||x===0)?'\\u2014':x.toFixed(2);}" +
+"function fmtBonus(s){var t=String(s==null?'':s).trim();if(!t)return '\\u2014';var l=t.replace(/\\s+/g,'').toLowerCase();return(l==='0'||l==='0.0'||l==='0.00')?'\\u2014':esc(t);}" +
+"function fmtTax(n){var x=parseFloat(n);return(!isFinite(x)||x===0)?'\\u2014':x.toFixed(2);}" +
+"function downloadPdf(){" +
+"  if(window.opener&&window.opener.localPdf){window.opener.localPdf();}" +
+"}" +
+"<\/script>" +
+"</body></html>";
+
+    var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var win = window.open(url, "_blank");
+    if (!win){ alert("Popup blocked. Browser me popups allow kar dein."); try{ URL.revokeObjectURL(url); }catch(e){} return; }
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 8000);
   }
 
   window.addEventListener('load', function(){
-    var btn = document.getElementById('pdfBtn');
-    if (!btn) return;
-    var newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.addEventListener('click', function(e){ e.preventDefault(); localPdf(); });
-
+    ['pdfBtn','pdfBtnP'].forEach(function(id){
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      var nb = btn.cloneNode(true);
+      btn.parentNode.replaceChild(nb, btn);
+      nb.addEventListener('click', function(e){ e.preventDefault(); localPdf(); });
+    });
     ['previewBtn','previewBtnP'].forEach(function(id){
       var pb = document.getElementById(id);
       if (!pb) return;

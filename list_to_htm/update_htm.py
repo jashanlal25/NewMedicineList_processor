@@ -585,15 +585,15 @@ def generate_html_new_format(template_path, items_extended, list_no="000001",
         f'{title} Offer List' if title.strip() else 'Offline Offer List'
     )
 
-    # Shop title — <h1> and OFFLINE_META.shopTitle (space-padded placeholder)
-    for placeholder in ('ZIDANE MEDICO                           ',
-                        'SSD MEDICO                           ',
-                        'SSD MEDICOS                          '):
-        if placeholder in content:
-            content = content.replace(placeholder, title)
+    # Shop title — OFFLINE_META.shopTitle JS value
+    content = re.sub(r'shopTitle:\s*"[^"]*"', f'shopTitle: "{title}"', content)
 
-    # Footer company name — show title or leave blank
-    content = content.replace('<strong>SSD MEDICOS</strong>', f'<strong>{title}</strong>' if title.strip() else '')
+    # Shop title — <h1 class="shopname"> HTML element
+    content = re.sub(r'(<h1[^>]*class="shopname"[^>]*>)[^<]*(</h1>)',
+                     lambda m: m.group(1) + title + m.group(2), content)
+
+    # Footer company name
+    content = re.sub(r'<strong>[^<]*MEDICO[^<]*</strong>', f'<strong>{title}</strong>' if title.strip() else '', content)
 
     # Custom message below offer list title
     msg = message.strip() if message else ''
