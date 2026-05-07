@@ -941,6 +941,11 @@
             </div>
 
             <div class="form-group">
+                <label for="message">Message (shown below offer title in New Format)</label>
+                <input type="text" id="message" name="message" placeholder="e.g., Valid for this month only | Special Discount Offer" style="width:100%;">
+            </div>
+
+            <div class="form-group">
                 <label>List Type</label>
                 <div class="list-type-toggle">
                     <button type="button" class="list-type-btn active" id="btnMarket" onclick="selectListType('M')">
@@ -1166,13 +1171,16 @@
         // Load saved values from localStorage
         const savedTitle = localStorage.getItem('html_maker_title');
         const savedWhatsapp = localStorage.getItem('html_maker_whatsapp');
+        const savedMessage = localStorage.getItem('html_maker_message');
 
         if (savedTitle) titleInput.value = savedTitle;
         if (savedWhatsapp) whatsappInput.value = savedWhatsapp;
+        if (savedMessage) document.getElementById('message').value = savedMessage;
 
         // Save values to localStorage on change
         titleInput.addEventListener('input', () => localStorage.setItem('html_maker_title', titleInput.value));
         whatsappInput.addEventListener('input', () => localStorage.setItem('html_maker_whatsapp', whatsappInput.value));
+        document.getElementById('message').addEventListener('input', e => localStorage.setItem('html_maker_message', e.target.value));
 
         // Update filename preview when list number changes
         document.getElementById('list_no').addEventListener('input', updateFilenamePreview);
@@ -1422,6 +1430,7 @@
             formData.append('whatsapp_number', whatsappInput.value);
             formData.append('list_type', document.getElementById('list_type').value);
             formData.append('output_format', document.getElementById('output_format').value);
+            formData.append('message', document.getElementById('message').value);
 
             loading.style.display = 'block';
             result.style.display = 'none';

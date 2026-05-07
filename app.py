@@ -544,6 +544,7 @@ def generate_html():
     list_date = request.form.get('list_date', None)
     title = request.form.get('title', 'S.S.D PHARMA')
     whatsapp_number = request.form.get('whatsapp_number', '923337068868')
+    message = request.form.get('message', '')
     list_type = request.form.get('list_type', 'M')
     if list_type not in ('M', 'C'):
         list_type = 'M'
@@ -606,7 +607,7 @@ def generate_html():
                          '"Extended TXT" mode from the home page (or include code|name|tp|bonus|tax).'
             }), 400
         html_new, err_new = generate_html_new_format(
-            template_path_new, items_extended, list_no, list_date, title, whatsapp_number
+            template_path_new, items_extended, list_no, list_date, title, whatsapp_number, message
         )
         if err_new:
             return jsonify({'error': err_new}), 500

@@ -520,7 +520,8 @@ def _new_format_letter_header(letter):
     return f'<tr class="company-head"><td colspan="7">{letter}</td></tr>\n'
 
 def generate_html_new_format(template_path, items_extended, list_no="000001",
-                             list_date=None, title="ANAS SYSTEM", whatsapp_number="923337068868"):
+                             list_date=None, title="ANAS SYSTEM", whatsapp_number="923337068868",
+                             message=""):
     """Generate a new-format HTML offer list.
 
     items_extended: list of dicts with keys name, value, code, tp, bonus, tax.
@@ -593,6 +594,13 @@ def generate_html_new_format(template_path, items_extended, list_no="000001",
 
     # Footer company name — show title or leave blank
     content = content.replace('<strong>SSD MEDICOS</strong>', f'<strong>{title}</strong>' if title.strip() else '')
+
+    # Custom message below offer list title
+    if message and message.strip():
+        msg_html = f'<div style="text-align:center;padding:6px 16px;font-size:14px;color:#555;font-style:italic;">{message.strip()}</div>'
+    else:
+        msg_html = ''
+    content = content.replace('<!--MESSAGE_PLACEHOLDER-->', msg_html)
 
     # WhatsApp number — both the hidden input and the JS fallback use the same string.
     content = content.replace('+03112127664 ', whatsapp_number)
