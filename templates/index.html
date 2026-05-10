@@ -2270,7 +2270,7 @@
                     <div style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg);">
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" class="select-content" value="${item.id}" ${isChecked} style="margin-right: 10px; transform: scale(1.2);">
-                            <span style="flex-grow: 1; font-weight: 500; color: var(--text-primary);">${item.name}</span>
+                            <span style="flex-grow: 1; font-weight: 500; color: var(--text-primary);">${escapeHtml(item.name)}</span>
                             <span style="color: #666; font-size: 12px;">(${item.content.split('\n').filter(l => l.trim()).length} lines)</span>
                         </label>
                     </div>
@@ -2714,8 +2714,8 @@
                             title="Delete">✕</button>
                     </td>
                     <td class="col-num">${i + 1}</td>
-                    <td class="col-name editable-cell" style="cursor:pointer;" onclick="editCellInlineMainPage('${id}', this, 'name', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')">${item.name}</td>
-                    <td class="col-value editable-cell" style="cursor:pointer;" onclick="editCellInlineMainPage('${id}', this, 'value', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')">${item.value}</td>
+                    <td class="col-name editable-cell" style="cursor:pointer;" onclick="editCellInlineMainPage('${id}', this, 'name', '${escapeHtml(item.name)}', '${escapeHtml(item.value)}')">${escapeHtml(item.name)}</td>
+                    <td class="col-value editable-cell" style="cursor:pointer;" onclick="editCellInlineMainPage('${id}', this, 'value', '${escapeHtml(item.name)}', '${escapeHtml(item.value)}')">${escapeHtml(item.value)}</td>
                 </tr>`;
             });
 
@@ -2744,15 +2744,7 @@
         }
 
         // Helper function to escape HTML for safe attribute values (main page)
-        function escapeHtmlMainPage(text) {
-            if (!text) return '';
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
+        const escapeHtmlMainPage = escapeHtml;
 
         // Track if we're currently editing to prevent double-click issues
         let isEditingMainPage = false;
@@ -3021,9 +3013,9 @@
             }
         }
 
-        // Escape HTML to prevent XSS
         function escapeHtml(unsafe) {
-            return unsafe
+            if (!unsafe) return '';
+            return String(unsafe)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")

@@ -32,6 +32,10 @@ def grok_chat():
         items   = data.get('items', [])
         if not command:
             return jsonify({'error': 'Command missing'}), 400
+        if len(command) > 2000:
+            return jsonify({'error': 'Command too long'}), 400
+        if len(items) > 5000:
+            return jsonify({'error': 'Too many items'}), 400
         compact  = '\n'.join(f"{it['name']}|{it['disc']}%" for it in items if it.get('name'))
         user_msg = (f"Current list:\n{compact}\n\n" if compact else '') + f"Command: {command}"
         payload  = {

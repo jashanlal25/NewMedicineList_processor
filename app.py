@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, send_file, jsonify, redirect, session
 from bs4 import BeautifulSoup
+from werkzeug.utils import secure_filename
 import os
 import io
 import re
@@ -32,7 +33,7 @@ def decompress_if_needed(data):
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'), static_url_path='/static')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.secret_key = 'medicinesearch_supersecret_key'  # Needed for sessions
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-insecure-key')
 
 from chatbot_bp import chatbot_bp
 app.register_blueprint(chatbot_bp)
@@ -249,7 +250,7 @@ def upload_file():
     text_output = generate_text_output(results, separator, extended=extended_output)
 
     # Store for download
-    filename_base = os.path.splitext(file.filename)[0]
+    filename_base = os.path.splitext(secure_filename(file.filename))[0]
     output_filename = f"{filename_base}_name_with_%.txt"
     processed_results['latest'] = {
         'text': text_output,
@@ -717,7 +718,7 @@ def upload_lists():
             continue
 
         # Save the file temporarily to writable temp directory (/tmp on Vercel)
-        filename = file.filename
+        filename = secure_filename(file.filename) or 'upload'
         upload_dir = os.path.join(tempfile.gettempdir(), 'medicine_uploads')
         os.makedirs(upload_dir, exist_ok=True)
         filepath = os.path.join(upload_dir, filename)
