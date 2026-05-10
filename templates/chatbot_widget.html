@@ -1,0 +1,904 @@
+<!-- Floating Chatbot Widget — pure JS, Groq AI toggle, file/image upload -->
+<style>
+/* ── Bubble ── */
+#cb-bubble {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg,#0f172a,#1d4ed8);
+  color: #fff; border: none; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(29,78,216,.5);
+  font-size: 24px; display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, box-shadow .2s;
+}
+#cb-bubble:hover { transform: scale(1.1); box-shadow: 0 8px 28px rgba(29,78,216,.65); }
+#cb-bubble .cb-badge {
+  position: absolute; top: -3px; right: -3px;
+  background: #ef4444; color: #fff; border-radius: 50%;
+  width: 20px; height: 20px; font-size: 10px; font-weight: 700;
+  display: none; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+}
+
+/* ── Panel ── */
+#cb-panel {
+  position: fixed; bottom: 92px; right: 24px; z-index: 9999;
+  width: 370px;
+  max-height: min(560px, calc(100vh - 110px));
+  max-width: calc(100vw - 32px);
+  background: #fff; border-radius: 20px;
+  box-shadow: 0 12px 48px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08);
+  display: none; flex-direction: column; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-size: 14px; border: 1px solid rgba(0,0,0,.06);
+}
+#cb-panel.open { display: flex; animation: cbSlideIn .18s ease; }
+@keyframes cbSlideIn {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Header ── */
+#cb-header {
+  background: linear-gradient(135deg,#0f172a 0%,#1e40af 60%,#2563eb 100%);
+  color: #fff; padding: 12px 16px 10px;
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+#cb-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,.15); display: flex;
+  align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+#cb-title { flex: 1; }
+#cb-title strong { font-size: 13px; display: block; }
+#cb-title small { font-size: 10px; opacity: .7; display: block; margin-bottom: 5px; }
+/* AI toggles — sit below the agent name */
+#cb-ai-toggles { display: flex; align-items: center; gap: 8px; }
+.cb-ai-row { display: flex; align-items: center; gap: 4px; }
+.cb-ai-badge {
+  font-size: 9px; background: rgba(255,255,255,.15); border-radius: 10px;
+  padding: 2px 6px; font-weight: 600; letter-spacing: .5px;
+  transition: background .2s; white-space: nowrap; color: #fff;
+}
+.cb-ai-badge.active-groq { background: #22c55e; }
+.cb-ai-badge.active-puter { background: #a855f7; }
+#cb-ai-divider { width: 1px; height: 14px; background: rgba(255,255,255,.25); }
+.cb-tog { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.cb-tog input { opacity: 0; width: 0; height: 0; }
+.cb-tog-sl {
+  position: absolute; inset: 0; background: rgba(255,255,255,.25);
+  border-radius: 20px; cursor: pointer; transition: background .2s;
+}
+.cb-tog-sl:before {
+  content: ''; position: absolute; left: 3px; top: 3px;
+  width: 14px; height: 14px; background: #fff; border-radius: 50%;
+  transition: transform .2s;
+}
+.cb-tog input:checked + .cb-tog-sl { background: #22c55e; }
+.cb-tog input:checked + .cb-tog-sl:before { transform: translateX(16px); }
+#cb-close {
+  background: rgba(255,255,255,.12); border: none; color: #fff; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: background .15s;
+}
+#cb-close:hover { background: rgba(255,255,255,.25); }
+
+/* ── Messages ── */
+#cb-messages {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 10px;
+  background: #f4f6fb;
+}
+#cb-messages::-webkit-scrollbar { width: 4px; }
+#cb-messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+.cb-msg {
+  max-width: 86%; padding: 9px 13px; border-radius: 14px;
+  line-height: 1.5; font-size: 13px; word-break: break-word;
+}
+.cb-msg.bot {
+  background: #fff; color: #1e293b; align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.cb-msg.user {
+  background: linear-gradient(135deg,#1d4ed8,#2563eb);
+  color: #fff; align-self: flex-end; border-bottom-right-radius: 4px;
+}
+.cb-msg.error {
+  background: #fef2f2; color: #b91c1c; align-self: flex-start;
+  border: 1px solid #fecaca; border-bottom-left-radius: 4px;
+}
+.cb-msg.thinking {
+  background: #eff6ff; color: #3b82f6; align-self: flex-start;
+  border-bottom-left-radius: 4px; font-style: italic;
+  display: flex; align-items: center; gap: 8px;
+}
+.cb-dots { display: flex; gap: 4px; }
+.cb-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;
+  animation: cbDot 1.2s infinite ease-in-out;
+}
+.cb-dots span:nth-child(2) { animation-delay: .2s; }
+.cb-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes cbDot { 0%,80%,100% { opacity: .2; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+.cb-msg code {
+  background: rgba(0,0,0,.07); padding: 1px 5px; border-radius: 4px;
+  font-size: 11px; font-family: monospace;
+}
+.cb-attach-preview {
+  max-width: 180px; border-radius: 8px; margin-top: 4px; display: block;
+  border: 1px solid rgba(0,0,0,.1);
+}
+
+/* ── Hints ── */
+#cb-hints {
+  padding: 8px 12px 6px; display: flex; flex-wrap: wrap; gap: 5px;
+  background: #fff; border-top: 1px solid #f1f5f9;
+}
+.cb-hint {
+  background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;
+  border-radius: 20px; padding: 3px 10px; font-size: 11px; cursor: pointer;
+  white-space: nowrap; transition: background .12s;
+}
+.cb-hint:hover { background: #dbeafe; }
+.cb-hint-key { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.cb-hint-key:hover { background: #dcfce7; }
+
+/* ── Footer ── */
+#cb-footer {
+  padding: 10px 12px; background: #fff;
+  border-top: 1px solid #f1f5f9; display: flex; gap: 8px; align-items: flex-end;
+}
+#cb-attach-btn {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  color: #64748b; font-size: 18px; border-radius: 8px;
+  transition: background .12s; flex-shrink: 0;
+  display: flex; align-items: center;
+}
+#cb-attach-btn:hover { background: #f1f5f9; color: #1d4ed8; }
+#cb-file-input { display: none; }
+#cb-input {
+  flex: 1; border: 1.5px solid #e2e8f0; border-radius: 12px;
+  padding: 8px 12px; font-size: 13px; outline: none;
+  resize: none; min-height: 38px; max-height: 90px; line-height: 20px;
+  font-family: inherit; background: #f8faff; transition: border-color .15s;
+}
+#cb-input:focus { border-color: #2563eb; background: #fff; }
+#cb-send {
+  background: linear-gradient(135deg,#1d4ed8,#2563eb);
+  color: #fff; border: none; border-radius: 12px;
+  width: 38px; height: 38px; cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: opacity .15s;
+}
+#cb-send:hover { opacity: .88; }
+#cb-send:disabled { opacity: .5; cursor: not-allowed; }
+#cb-attach-info {
+  font-size: 10px; color: #94a3b8; padding: 0 12px 6px;
+  background: #fff; display: none;
+}
+</style>
+
+<button id="cb-bubble" onclick="cbToggle()" title="List Assistant">
+  🤖
+  <span class="cb-badge" id="cb-badge"></span>
+</button>
+
+<div id="cb-panel">
+  <div id="cb-header">
+    <div id="cb-avatar">🤖</div>
+    <div id="cb-title">
+      <strong>List Assistant</strong>
+      <small>reads your current list in real-time</small>
+      <div id="cb-ai-toggles">
+        <div class="cb-ai-row" title="Groq AI — free Llama 3.3 (API key from console.groq.com)">
+          <span class="cb-ai-badge" id="cb-groq-badge">GROQ</span>
+          <label class="cb-tog">
+            <input type="checkbox" id="cb-grok-toggle" onchange="cbGrokToggled()" onclick="event.stopPropagation()">
+            <span class="cb-tog-sl"></span>
+          </label>
+        </div>
+        <div id="cb-ai-divider"></div>
+        <div class="cb-ai-row" title="Puter AI — real Grok 4.3, no API key needed">
+          <span class="cb-ai-badge" id="cb-puter-badge">PUTER</span>
+          <label class="cb-tog">
+            <input type="checkbox" id="cb-puter-toggle" onchange="cbPuterToggled()" onclick="event.stopPropagation()">
+            <span class="cb-tog-sl"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <button id="cb-close" onclick="cbToggle()">✕</button>
+  </div>
+
+  <div id="cb-messages">
+    <div class="cb-msg bot">Hi! I can edit your medicine list. Try a quick command below or describe what you need.</div>
+  </div>
+
+  <div id="cb-hints">
+    <span class="cb-hint" onclick="cbQuick('remove duplicates')">remove duplicates</span>
+    <span class="cb-hint" onclick="cbQuick('cap discount 20')">cap disc 20%</span>
+    <span class="cb-hint" onclick="cbQuick('remove 0 discount')">remove 0%</span>
+    <span class="cb-hint" onclick="cbQuick('remove below 5')">remove &lt;5%</span>
+    <span class="cb-hint" onclick="cbQuick('count items')">count</span>
+    <span class="cb-hint" onclick="cbQuick('show duplicates')">duplicates</span>
+    <span class="cb-hint" onclick="cbQuick('show decimal discount')">decimal disc</span>
+    <span class="cb-hint" onclick="cbQuick('sort')">sort A-Z</span>
+    <span class="cb-hint" onclick="cbQuick('stats')">stats</span>
+    <span class="cb-hint" onclick="cbQuick('undo')">undo</span>
+    <span class="cb-hint cb-hint-key" onclick="cbChangeKey()" title="Change or update your Groq API key">🔑 change key</span>
+  </div>
+
+  <div id="cb-attach-info"></div>
+
+  <div id="cb-footer">
+    <button id="cb-attach-btn" title="Attach image or document" onclick="document.getElementById('cb-file-input').click()">📎</button>
+    <input type="file" id="cb-file-input" accept="image/*,.txt,.csv,.pdf" onchange="cbFileSelected(this)">
+    <textarea id="cb-input" placeholder="Type a command or question…" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cbSend();}"
+      oninput="this.style.height='38px';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
+    <button id="cb-send" onclick="cbSend()">➤</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var undoStack   = [];
+  var unreadCount = 0;
+  var GROK_KEY    = 'cb_groq_key';
+  var pendingFile = null;   // {type:'image'|'text', data:..., name:...}
+
+  /* ── Panel toggle ── */
+  function cbToggle(){
+    var p = document.getElementById('cb-panel');
+    p.classList.toggle('open');
+    if(p.classList.contains('open')){
+      unreadCount = 0;
+      document.getElementById('cb-badge').style.display = 'none';
+      document.getElementById('cb-input').focus();
+    }
+  }
+  window.cbToggle = cbToggle;
+
+  function cbSetMode(mode){
+    // mode: 'local' | 'groq' | 'puter'
+    var groqTog   = document.getElementById('cb-grok-toggle');
+    var puterTog  = document.getElementById('cb-puter-toggle');
+    var groqBadge = document.getElementById('cb-groq-badge');
+    var puterBadge= document.getElementById('cb-puter-badge');
+    groqTog.checked  = (mode === 'groq');
+    puterTog.checked = (mode === 'puter');
+    groqBadge.classList.toggle('active-groq',  mode === 'groq');
+    puterBadge.classList.toggle('active-puter', mode === 'puter');
+  }
+
+  /* ── Groq toggle ── */
+  function cbGrokToggled(){
+    var on = document.getElementById('cb-grok-toggle').checked;
+    if(on){
+      // Turn off Puter first
+      cbSetMode('local');
+      document.getElementById('cb-grok-toggle').checked = true;
+      document.getElementById('cb-groq-badge').classList.add('active-groq');
+      var key = localStorage.getItem(GROK_KEY) || '';
+      if(!key){
+        key = prompt('Enter your Groq API key (free at console.groq.com):\n(Stored only in this browser — never sent anywhere except api.groq.com)');
+        if(!key){ cbSetMode('local'); return; }
+        localStorage.setItem(GROK_KEY, key.trim());
+      }
+      addMsg('🟢 <b>Groq AI ON</b> — free Llama 3.3 active. Natural language commands ready!', 'bot');
+    } else {
+      cbSetMode('local');
+      addMsg('⚪ Back to built-in rule engine.', 'bot');
+    }
+  }
+  window.cbGrokToggled = cbGrokToggled;
+
+  /* ── Puter toggle ── */
+  var puterLoaded = false;
+  function cbPuterToggled(){
+    var on = document.getElementById('cb-puter-toggle').checked;
+    if(on){
+      cbSetMode('local'); // reset both first
+      document.getElementById('cb-puter-toggle').checked = true;
+      document.getElementById('cb-puter-badge').classList.add('active-puter');
+      // Lazy-load Puter.js once
+      if(!puterLoaded){
+        var s = document.createElement('script');
+        s.src = 'https://js.puter.com/v2/';
+        s.onload = function(){
+          puterLoaded = true;
+          addMsg('🟣 <b>Puter AI ON</b> — real Grok 4.3 active! No API key needed.<br><small style="opacity:.7">First use may show a Puter login popup.</small>', 'bot');
+        };
+        s.onerror = function(){
+          addMsg('❌ Failed to load Puter.js — check your internet connection.', 'error');
+          cbSetMode('local');
+        };
+        document.head.appendChild(s);
+      } else {
+        addMsg('🟣 <b>Puter AI ON</b> — real Grok 4.3 active!', 'bot');
+      }
+    } else {
+      cbSetMode('local');
+      addMsg('⚪ Back to built-in rule engine.', 'bot');
+    }
+  }
+  window.cbPuterToggled = cbPuterToggled;
+
+  /* ── Change / update API key ── */
+  function cbChangeKey(){
+    var current = localStorage.getItem(GROK_KEY) || '';
+    var masked  = current ? '…' + current.slice(-6) : '(none saved)';
+    var key = prompt(
+      'Current key: ' + masked + '\n\n' +
+      'Enter a new Groq API key, or leave blank to keep current.\n' +
+      'Get a free key at: console.groq.com → API Keys'
+    );
+    if(key === null) return; // cancelled
+    if(!key.trim()){
+      addMsg('No change — kept existing key.', 'bot');
+      return;
+    }
+    localStorage.setItem(GROK_KEY, key.trim());
+    addMsg('🔑 Key saved. Checking if Groq is working…', 'bot');
+    cbTestKey(key.trim());
+  }
+  window.cbChangeKey = cbChangeKey;
+
+  /* ── Test key with a minimal ping ── */
+  function cbTestKey(apiKey){
+    var payload = {
+      model: 'llama-3.1-8b-instant',
+      messages: [{role:'user', content:'reply with only: ok'}],
+      max_tokens: 5, temperature: 0
+    };
+    fetch('/chatbot/grok', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({apiKey: apiKey, rawPayload: payload})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.error){
+        if(/401|403|invalid.*key/i.test(data.error)){
+          // Don't clear key on test — let user correct it
+          cbSetMode('local');
+          // Show actual Groq error detail
+          var detail = data.error.replace(/^401:\s*/,'');
+          addMsg(
+            '❌ <b>Groq rejected this key</b><br>' +
+            '<small style="color:#6b7280">Groq says: ' + detail + '</small><br><br>' +
+            '<b>Common reasons:</b><br>' +
+            '• Key copied incorrectly (missing characters)<br>' +
+            '• Key was deleted in Groq console<br>' +
+            '• Account not verified yet<br><br>' +
+            '🔑 Get a key at: <a href="https://console.groq.com" target="_blank" style="color:#b91c1c;font-weight:600">console.groq.com</a> → API Keys → Create<br><br>' +
+            '<span style="cursor:pointer;color:#1d4ed8;text-decoration:underline;font-weight:600" onclick="cbChangeKey()">→ Try a different key</span>',
+            'error'
+          );
+        } else if(/429|rate.?limit/i.test(data.error)){
+          addMsg('⚠️ Key saved but <b>rate limit active right now</b> — Groq is working, just wait ~60 sec before sending commands.', 'bot');
+        } else {
+          addMsg('⚠️ Key saved but Groq returned: <code>' + data.error + '</code>', 'error');
+        }
+      } else {
+        addMsg('✅ <b>Groq is working!</b> Key is valid and responding. You\'re good to go.', 'bot');
+      }
+    })
+    .catch(function(err){
+      addMsg('⚠️ Key saved but could not reach Groq — check your internet connection. (' + err.message + ')', 'error');
+    });
+  }
+
+  /* ── File attach ── */
+  function cbFileSelected(input){
+    var file = input.files[0];
+    if(!file){ return; }
+    input.value = '';
+    var infoEl = document.getElementById('cb-attach-info');
+
+    if(file.type.startsWith('image/')){
+      var reader = new FileReader();
+      reader.onload = function(e){
+        pendingFile = {type:'image', data: e.target.result, name: file.name};
+        infoEl.textContent = '📎 Image attached: ' + file.name + ' — add a message and send';
+        infoEl.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Text-based file
+      var reader2 = new FileReader();
+      reader2.onload = function(e){
+        pendingFile = {type:'text', data: e.target.result, name: file.name};
+        infoEl.textContent = '📎 File attached: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+        infoEl.style.display = 'block';
+      };
+      reader2.readAsText(file);
+    }
+  }
+  window.cbFileSelected = cbFileSelected;
+
+  /* ── Helpers ── */
+  function getActiveTextarea(){
+    var ta = document.getElementById('editorTextarea');
+    if(ta && ta.value.trim()) return ta;
+    for(var i=1; i<=5; i++){
+      ta = document.getElementById('markdown-'+i);
+      if(ta && ta.value.trim()) return ta;
+    }
+    var all = document.querySelectorAll('textarea');
+    for(var j=0; j<all.length; j++){
+      if(all[j].value.includes('-----')) return all[j];
+    }
+    return null;
+  }
+
+  function triggerRefresh(ta){
+    ta.dispatchEvent(new Event('input', {bubbles:true}));
+    if(typeof updatePreview === 'function') updatePreview();
+    var m = ta.id && ta.id.match(/markdown-(\d+)/);
+    if(m && typeof updateMainPagePreview === 'function') updateMainPagePreview(m[1]);
+  }
+
+  function addMsg(text, cls){
+    var box = document.getElementById('cb-messages');
+    var d = document.createElement('div');
+    d.className = 'cb-msg ' + cls;
+    d.innerHTML = text;
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+    if(cls !== 'user' && !document.getElementById('cb-panel').classList.contains('open')){
+      unreadCount++;
+      var b = document.getElementById('cb-badge');
+      b.textContent = unreadCount; b.style.display = 'flex';
+    }
+    return d;
+  }
+
+  function parseLines(text){
+    return text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  }
+  function getName(line){
+    var i = line.indexOf('-----');
+    return i<0 ? line.trim() : line.substring(0,i).trim();
+  }
+  function getDisc(line){
+    var i = line.indexOf('-----');
+    if(i<0) return null;
+    var rest = line.substring(i+5);
+    var pipe = rest.indexOf('|');
+    var part = (pipe>=0 ? rest.substring(0,pipe) : rest).trim();
+    var m = part.match(/([\d.]+)/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+  function setDisc(line, val){
+    var i = line.indexOf('-----');
+    if(i<0) return line;
+    var name = line.substring(0,i+5);
+    var rest = line.substring(i+5);
+    var pipe = rest.indexOf('|');
+    if(pipe>=0){
+      var sfx = rest.substring(0,pipe).trim().replace(/[\d.]+%?/,'').replace(/\s/g,'');
+      return name + ' ' + val.toFixed(2) + '%' + sfx + rest.substring(pipe);
+    }
+    return name + ' ' + val.toFixed(2) + '%';
+  }
+  function itemList(arr, max){
+    max = max||8;
+    var s = arr.slice(0,max).map(function(n){return '• '+n;}).join('<br>');
+    if(arr.length>max) s += '<br><i>…and '+(arr.length-max)+' more</i>';
+    return s;
+  }
+
+  /* ── Rule-based engine ── */
+  function runCommand(cmd, ta){
+    var lines = parseLines(ta.value);
+    var original = ta.value;
+    var c = cmd.toLowerCase().trim();
+
+    if(/^undo/.test(c)){
+      if(!undoStack.length) return 'Nothing to undo.';
+      ta.value = undoStack.pop(); triggerRefresh(ta);
+      return 'Undone. ' + parseLines(ta.value).filter(function(l){return l.includes('-----');}).length + ' items remain.';
+    }
+    if(/^count|how many/.test(c)){
+      var cnt = lines.filter(function(l){return l.includes('-----');}).length;
+      return 'Your list has <b>' + cnt + ' items</b>.';
+    }
+    if((/decimal|\./.test(c)||/decimal disc/.test(c)) && /show|list|which|display/.test(c)){
+      var dec = lines.filter(function(l){
+        if(!l.includes('-----')) return false;
+        var d = getDisc(l); return d!==null && d%1!==0;
+      });
+      if(!dec.length) return 'No items with decimal discount found.';
+      return '<b>' + dec.length + ' item(s) with decimal discount:</b><br>' +
+        dec.map(function(l){return '• '+getName(l)+' ('+getDisc(l)+'%)';}).join('<br>');
+    }
+    if(/^show dup/.test(c)){
+      var seen={}, dups=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')) return;
+        var n=getName(l).toLowerCase(); if(seen[n]) dups.push(getName(l)); seen[n]=true;
+      });
+      if(!dups.length) return 'No duplicates found.';
+      return '<b>'+dups.length+' duplicate(s):</b><br>'+dups.map(function(d){return '• '+d;}).join('<br>');
+    }
+    if(/^remove dup|^delete dup/.test(c)){
+      var seen2={}, newL=[], rem=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newL.push(l);return;}
+        var n=getName(l).toLowerCase();
+        if(!seen2[n]){seen2[n]=true;newL.push(l);}
+        else rem.push(getName(l)+' ('+getDisc(l)+'%)');
+      });
+      if(!rem.length) return 'No duplicates found.';
+      undoStack.push(original); ta.value=newL.join('\n'); triggerRefresh(ta);
+      return 'Removed <b>'+rem.length+' duplicate(s)</b>:<br>'+itemList(rem)+'<br><br>'+newL.filter(function(l){return l.includes('-----');}).length+' items remain.';
+    }
+    if(/remove.*(0%|zero|no disc|0 disc)/.test(c)){
+      var remZ=[],newLZ=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newLZ.push(l);return;}
+        if(getDisc(l)>0) newLZ.push(l); else remZ.push(getName(l));
+      });
+      if(!remZ.length) return 'No items with 0% discount found.';
+      undoStack.push(original); ta.value=newLZ.join('\n'); triggerRefresh(ta);
+      return 'Removed <b>'+remZ.length+' item(s)</b> with 0% discount:<br>'+itemList(remZ)+'<br><br>'+newLZ.filter(function(l){return l.includes('-----');}).length+' remain.';
+    }
+    var capM = c.match(/(?:cap|max|limit|set max).*?(\d+\.?\d*)/);
+    if(capM){
+      var cap=parseFloat(capM[1]), changedC=[];
+      var newLC = lines.map(function(l){
+        if(!l.includes('-----')) return l;
+        var d=getDisc(l);
+        if(d>cap){changedC.push(getName(l)+' ('+d+'% → '+cap+'%)');return setDisc(l,cap);}
+        return l;
+      });
+      if(!changedC.length) return 'No items had discount above '+cap+'%.';
+      undoStack.push(original); ta.value=newLC.join('\n'); triggerRefresh(ta);
+      return 'Capped <b>'+changedC.length+' item(s)</b> to '+cap+'%:<br>'+itemList(changedC);
+    }
+    var belowM = c.match(/(?:remove|delete|keep above).*?(\d+\.?\d*)/);
+    if(belowM && /below|less|under|keep above/.test(c)){
+      var thr=parseFloat(belowM[1]), remB=[],newLB=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newLB.push(l);return;}
+        if(getDisc(l)>=thr) newLB.push(l); else remB.push(getName(l)+' ('+getDisc(l)+'%)');
+      });
+      if(!remB.length) return 'No items below '+thr+'% found.';
+      undoStack.push(original); ta.value=newLB.join('\n'); triggerRefresh(ta);
+      return 'Removed <b>'+remB.length+' item(s)</b> below '+thr+'%:<br>'+itemList(remB)+'<br><br>'+newLB.filter(function(l){return l.includes('-----');}).length+' remain.';
+    }
+    var aboveM = c.match(/(?:remove|delete|keep below).*?(\d+\.?\d*)/);
+    if(aboveM && /above|more than|over|keep below/.test(c)){
+      var thrA=parseFloat(aboveM[1]), remA=[],newLA=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newLA.push(l);return;}
+        if(getDisc(l)<=thrA) newLA.push(l); else remA.push(getName(l)+' ('+getDisc(l)+'%)');
+      });
+      if(!remA.length) return 'No items above '+thrA+'% found.';
+      undoStack.push(original); ta.value=newLA.join('\n'); triggerRefresh(ta);
+      return 'Removed <b>'+remA.length+' item(s)</b> above '+thrA+'%:<br>'+itemList(remA)+'<br><br>'+newLA.filter(function(l){return l.includes('-----');}).length+' remain.';
+    }
+    if(/remove.*bonus|delete.*bonus/.test(c)){
+      var remBon=[],newLBon=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newLBon.push(l);return;}
+        var bonus=(l.split('|')[2]||'').trim();
+        if(!bonus) newLBon.push(l); else remBon.push(getName(l)+' ('+getDisc(l)+'%) ['+bonus+']');
+      });
+      if(!remBon.length) return 'No items with bonus found.';
+      undoStack.push(original); ta.value=newLBon.join('\n'); triggerRefresh(ta);
+      return 'Removed <b>'+remBon.length+' item(s)</b> with bonus:<br>'+itemList(remBon)+'<br><br>'+newLBon.filter(function(l){return l.includes('-----');}).length+' remain.';
+    }
+    var rmNm = cmd.match(/(?:remove|delete)\s+["']?(.+?)["']?\s*$/i);
+    if(rmNm && !/dup|disc|bonus|below|above|zero|0%/.test(c)){
+      var tgt=rmNm[1].trim().toLowerCase(), remN=[],newLN=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newLN.push(l);return;}
+        if(getName(l).toLowerCase().indexOf(tgt)>=0) remN.push(getName(l)+' ('+getDisc(l)+'%)');
+        else newLN.push(l);
+      });
+      if(!remN.length) return 'No items matching <code>'+rmNm[1]+'</code> found.';
+      undoStack.push(original); ta.value=newLN.join('\n'); triggerRefresh(ta);
+      return 'Removed <b>'+remN.length+' item(s)</b>:<br>'+itemList(remN);
+    }
+    var rnM = cmd.match(/rename\s+["']?(.+?)["']?\s+to\s+["']?(.+?)["']?\s*$/i);
+    if(rnM){
+      var oldN=rnM[1].trim().toLowerCase(), newN=rnM[2].trim(), rnList=[],newLR=[];
+      lines.forEach(function(l){
+        if(!l.includes('-----')){newLR.push(l);return;}
+        if(getName(l).toLowerCase().indexOf(oldN)>=0){
+          rnList.push(getName(l)+' → '+newN); newLR.push(l.replace(getName(l),newN));
+        } else newLR.push(l);
+      });
+      if(!rnList.length) return 'No items matching <code>'+rnM[1]+'</code> found.';
+      undoStack.push(original); ta.value=newLR.join('\n'); triggerRefresh(ta);
+      return 'Renamed <b>'+rnList.length+' item(s)</b>:<br>'+itemList(rnList);
+    }
+    if(/^sort/.test(c)){
+      var itemL=lines.filter(function(l){return l.includes('-----');});
+      var otherL=lines.filter(function(l){return !l.includes('-----');});
+      itemL.sort(function(a,b){return getName(a).toLowerCase().localeCompare(getName(b).toLowerCase());});
+      undoStack.push(original); ta.value=itemL.concat(otherL).join('\n'); triggerRefresh(ta);
+      return 'Sorted <b>'+itemL.length+' items</b> A-Z.';
+    }
+    var setM = c.match(/^set (?:all )?disc(?:ount)?.*?(\d+\.?\d*)/);
+    if(setM){
+      var nv=parseFloat(setM[1]), changedS=[];
+      var newLS=lines.map(function(l){
+        if(!l.includes('-----')) return l;
+        var old=getDisc(l); if(old!==nv) changedS.push(getName(l)+' ('+old+'% → '+nv+'%)');
+        return setDisc(l,nv);
+      });
+      undoStack.push(original); ta.value=newLS.join('\n'); triggerRefresh(ta);
+      return 'Set all discounts to <b>'+nv+'%</b>. Changed '+changedS.length+' item(s):<br>'+itemList(changedS);
+    }
+    if(/^stat|^summary|^info/.test(c)){
+      var its=lines.filter(function(l){return l.includes('-----');});
+      var ds=its.map(getDisc).filter(function(d){return d!==null;});
+      var z=ds.filter(function(d){return d===0;}).length;
+      return '<b>Items:</b> '+its.length+'<br><b>Zero disc:</b> '+z+
+        '<br><b>Max:</b> '+(ds.length?Math.max.apply(null,ds):0)+'%'+
+        '<br><b>Min:</b> '+(ds.length?Math.min.apply(null,ds):0)+'%'+
+        '<br><b>Avg:</b> '+(ds.length?(ds.reduce(function(a,b){return a+b;},0)/ds.length).toFixed(1):0)+'%';
+    }
+    if(/^help/.test(c)){
+      return '<b>Built-in commands:</b><br>' +
+        '• <code>remove duplicates</code><br>' +
+        '• <code>cap discount 20</code><br>' +
+        '• <code>remove 0 discount</code><br>' +
+        '• <code>remove below 5</code> / <code>above 30</code><br>' +
+        '• <code>remove bonus</code><br>' +
+        '• <code>remove Acenac</code><br>' +
+        '• <code>rename X to Y</code><br>' +
+        '• <code>set discount 10</code><br>' +
+        '• <code>sort</code> · <code>stats</code> · <code>count</code><br>' +
+        '• <code>show duplicates</code><br>' +
+        '• <code>show decimal discount</code><br>' +
+        '• <code>undo</code><br><br>' +
+        '<i>Turn on Groq AI (free) for natural language commands + file analysis.</i>';
+    }
+    return 'Command not recognized. Type <code>help</code> for all commands, or enable Groq AI for free-text questions.';
+  }
+
+  /* ── Grok API call ── */
+  function extractForGrok(ta){
+    return parseLines(ta.value)
+      .filter(function(l){return l.includes('-----');})
+      .map(function(l){return {name:getName(l), disc:getDisc(l)};});
+  }
+
+  function cbSendGrok(cmd, ta, file){
+    var apiKey = localStorage.getItem(GROK_KEY) || '';
+    if(!apiKey){
+      addMsg(
+        'No API key saved.<br>' +
+        '<span style="cursor:pointer;color:#1d4ed8;text-decoration:underline;font-weight:600" onclick="cbChangeKey()">→ Enter your Groq key now</span>',
+        'error'
+      ); return;
+    }
+    var items = ta ? extractForGrok(ta) : [];
+    var compact = items.map(function(it){return it.name+'|'+it.disc+'%';}).join('\n');
+
+    // Build message content (with optional text attachment — Groq has no vision)
+    var textBody = '';
+    if(file && file.type === 'image'){
+      addMsg('Image analysis is not supported with Groq. Attach a text/csv file instead.', 'error');
+      return;
+    }
+    if(file && file.type === 'text'){
+      textBody = 'Attached file ('+file.name+'):\n'+file.data.substring(0,3000)+'\n\n';
+    }
+    // Only send list when command needs it — saves tokens on free tier
+    var needsList = /remove|cap|set|sort|rename|disc|below|above|duplic|bonus|show|list|count|stat|how many/i.test(cmd);
+    if(compact && needsList) textBody += 'Current list:\n'+compact+'\n\n';
+    textBody += 'Command: '+cmd;
+
+    var payload = {
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {role:'system', content:'You are a medicine discount-list editor. Items format: name|disc%. For analysis: answer in plain text. For bulk changes: return ONLY the updated list in name|disc% format, one per line.'},
+        {role:'user', content: textBody}
+      ],
+      max_tokens: 1200, temperature: 0.1
+    };
+
+    var input = document.getElementById('cb-input');
+    var sendBtn = document.getElementById('cb-send');
+    input.disabled=true; sendBtn.disabled=true;
+
+    var thinkEl = addMsg('<div class="cb-dots"><span></span><span></span><span></span></div> Asking Groq…', 'thinking');
+
+    fetch('/chatbot/grok', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({apiKey:apiKey, command:cmd, items:items, rawPayload:payload})
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      thinkEl.remove();
+      if(data.error){
+        if(/401|403|invalid.*key/i.test(data.error)){
+          localStorage.removeItem(GROK_KEY);
+          // Turn off the toggle so user knows Groq is inactive
+          cbSetMode('local');
+          addMsg(
+            '❌ <b>API key rejected by Groq</b> — key has been cleared.<br><br>' +
+            'What happened: your key was invalid or expired.<br><br>' +
+            '🔑 Get a free key at: <a href="https://console.groq.com" target="_blank" style="color:#b91c1c;font-weight:600">console.groq.com</a> → Login → API Keys → Create key<br><br>' +
+            '<span style="cursor:pointer;color:#1d4ed8;text-decoration:underline;font-weight:600" onclick="cbChangeKey()">→ Enter new key now</span>',
+            'error'
+          );
+        } else if(/429|rate.?limit|too many/i.test(data.error)){
+          addMsg(
+            '⏳ <b>Rate limit hit!</b><br><br>' +
+            'What happened: Groq free tier allows <b>~30 requests/min</b> and <b>~14,400 tokens/min</b>. Your key has temporarily hit that ceiling.<br><br>' +
+            '✅ <b>Wait ~60 seconds</b> then try again — limit resets automatically.<br>' +
+            '🔑 <b>Or use a different key:</b> <a href="https://console.groq.com" target="_blank" style="color:#1d4ed8">console.groq.com</a> → API Keys (create a second free key).<br><br>' +
+            '<span style="cursor:pointer;color:#1d4ed8;text-decoration:underline" onclick="cbChangeKey()">→ Change API key now</span>',
+            'error'
+          );
+        } else {
+          addMsg('<b>Groq error:</b> ' + data.error, 'error');
+        }
+        return;
+      }
+      var reply = data.reply || '';
+      // Detect if Grok returned a list to apply
+      if(ta){
+        var gLines = reply.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+        var listLike = gLines.length>2 && gLines.filter(function(l){return l.includes('|');}).length > gLines.length*0.5;
+        if(listLike){
+          var grokDisc = {};
+          gLines.forEach(function(l){
+            var p=l.split('|'); if(p.length<2) return;
+            var n=p[0].trim().toLowerCase(), d=parseFloat((p[1]||'').replace('%',''));
+            if(!isNaN(d)) grokDisc[n]=d;
+          });
+          var orig=ta.value, changed=[];
+          var newLines=parseLines(orig).map(function(l){
+            if(!l.includes('-----')) return l;
+            var n=getName(l).toLowerCase();
+            if(grokDisc[n]!==undefined && grokDisc[n]!==getDisc(l)){
+              changed.push(getName(l)+' ('+getDisc(l)+'% → '+grokDisc[n]+'%)');
+              return setDisc(l,grokDisc[n]);
+            }
+            return l;
+          });
+          if(changed.length){
+            undoStack.push(orig); ta.value=newLines.join('\n'); triggerRefresh(ta);
+            addMsg('Applied changes to <b>'+changed.length+' item(s)</b>:<br>'+
+              itemList(changed)+'<br><i style="font-size:11px">Undo available.</i>', 'bot');
+            return;
+          }
+        }
+      }
+      addMsg(reply.replace(/\n/g,'<br>'), 'bot');
+    })
+    .catch(function(err){
+      thinkEl.remove();
+      addMsg('Network error: '+err.message, 'error');
+    })
+    .finally(function(){
+      input.disabled=false; sendBtn.disabled=false; input.focus();
+    });
+  }
+
+  /* ── Quick hint ── */
+  function cbQuick(txt){ document.getElementById('cb-input').value=txt; cbSend(); }
+  window.cbQuick = cbQuick;
+
+  /* ── Puter send ── */
+  function cbSendPuter(cmd, ta, file){
+    if(typeof puter === 'undefined'){
+      addMsg('Puter.js not loaded yet — please wait a moment and try again.', 'error'); return;
+    }
+    var input = document.getElementById('cb-input');
+    var sendBtn = document.getElementById('cb-send');
+    input.disabled = true; sendBtn.disabled = true;
+
+    var ta = getActiveTextarea();
+    var items = ta ? extractForGrok(ta) : [];
+    var compact = items.map(function(it){ return it.name+'|'+it.disc+'%'; }).join('\n');
+
+    var prompt = '';
+    if(file && file.type === 'text'){
+      prompt += 'Attached file ('+file.name+'):\n'+file.data.substring(0,3000)+'\n\n';
+    }
+    var needsListP = /remove|cap|set|sort|rename|disc|below|above|duplic|bonus|show|list|count|stat|how many/i.test(cmd);
+    if(compact && needsListP) prompt += 'Current list:\n'+compact+'\n\n';
+    prompt += 'Command: '+cmd;
+
+    var thinkEl = addMsg('<div class="cb-dots"><span></span><span></span><span></span></div> Asking Grok via Puter…', 'thinking');
+
+    puter.ai.chat(prompt, {model: 'x-ai/grok-3-mini'})
+    .then(function(response){
+      thinkEl.remove();
+      var reply = (response && response.message && response.message.content)
+        ? response.message.content
+        : (typeof response === 'string' ? response : JSON.stringify(response));
+
+      // Detect if Puter/Grok returned a list
+      if(ta){
+        var gLines = reply.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+        var listLike = gLines.length>2 && gLines.filter(function(l){return l.includes('|');}).length > gLines.length*0.5;
+        if(listLike){
+          var grokDisc = {};
+          gLines.forEach(function(l){
+            var p=l.split('|'); if(p.length<2) return;
+            var n=p[0].trim().toLowerCase(), d=parseFloat((p[1]||'').replace('%',''));
+            if(!isNaN(d)) grokDisc[n]=d;
+          });
+          var orig=ta.value, changed=[];
+          var newLines=parseLines(orig).map(function(l){
+            if(!l.includes('-----')) return l;
+            var n=getName(l).toLowerCase();
+            if(grokDisc[n]!==undefined && grokDisc[n]!==getDisc(l)){
+              changed.push(getName(l)+' ('+getDisc(l)+'% → '+grokDisc[n]+'%)');
+              return setDisc(l,grokDisc[n]);
+            }
+            return l;
+          });
+          if(changed.length){
+            undoStack.push(orig); ta.value=newLines.join('\n'); triggerRefresh(ta);
+            addMsg('Applied changes to <b>'+changed.length+' item(s)</b>:<br>'+
+              itemList(changed)+'<br><i style="font-size:11px">Undo available.</i>', 'bot');
+            return;
+          }
+        }
+      }
+      addMsg(reply.replace(/\n/g,'<br>'), 'bot');
+    })
+    .catch(function(err){
+      thinkEl.remove();
+      addMsg('Puter error: ' + (err.message || String(err)), 'error');
+    })
+    .finally(function(){
+      input.disabled=false; sendBtn.disabled=false; input.focus();
+    });
+  }
+
+  /* ── Main send ── */
+  function cbSend(){
+    var input = document.getElementById('cb-input');
+    var cmd = input.value.trim();
+    var file = pendingFile;
+
+    if(!cmd && !file) return;
+    if(!cmd) cmd = 'Analyze or describe this attachment.';
+
+    input.value = '';
+    input.style.height = '38px';
+    var userHtml = cmd;
+    if(file){
+      if(file.type==='image') userHtml += '<br><img src="'+file.data+'" class="cb-attach-preview" alt="'+file.name+'">';
+      else userHtml += '<br><code>📄 '+file.name+'</code>';
+    }
+    addMsg(userHtml, 'user');
+
+    pendingFile = null;
+    document.getElementById('cb-attach-info').style.display = 'none';
+
+    var groqOn  = document.getElementById('cb-grok-toggle').checked;
+    var puterOn = document.getElementById('cb-puter-toggle').checked;
+    var ta = getActiveTextarea();
+
+    if(puterOn){
+      cbSendPuter(cmd, ta, file);
+    } else if(groqOn){
+      cbSendGrok(cmd, ta, file);
+    } else {
+      if(file){
+        addMsg('File analysis requires Groq or Puter AI mode — toggle one on in the header.', 'error');
+        return;
+      }
+      if(!ta){ addMsg('No list found. Upload a file or paste items first.', 'error'); return; }
+      var reply = runCommand(cmd, ta);
+      addMsg(reply, 'bot');
+    }
+  }
+  window.cbSend = cbSend;
+})();
+</script>

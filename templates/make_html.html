@@ -976,7 +976,7 @@
                 </div>
                 <input type="hidden" id="output_format" name="output_format" value="old">
                 <div style="margin-top: 6px; font-size: 12px; color: var(--text-secondary);">
-                    New format requires Extended TXT (with code|tp|bonus|tax). Generate it from the home page.
+                    New format requires Extended TXT (with tp|bonus|tax). Generate it from the home page.
                 </div>
             </div>
 
@@ -1022,7 +1022,6 @@
                 <div id="colToggles" style="display:none; margin:8px 0; padding:8px 12px; background:#f0f4ff; border:1px solid #c8d8f0; border-radius:6px; font-size:12px; flex-wrap:wrap; gap:12px; align-items:center;">
                     <span style="font-weight:600; color:#333;">Columns:</span>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colNum" checked onchange="updatePreview()"> #</label>
-                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colCode" checked onchange="updatePreview()"> Code</label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colName" checked onchange="updatePreview()"> Name</label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colDisc" checked onchange="updatePreview()"> Disc%</label>
                     <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="colBonus" onchange="updatePreview()"> Bonus</label>
@@ -1279,17 +1278,16 @@
                 if (line.includes('→')) line = line.split('→')[1].trim();
                 if (!line.includes('-----')) continue;
 
-                let code = '', tp = '', bonus = '', tax = '', isExtended = false;
+                let tp = '', bonus = '', tax = '', isExtended = false;
                 let name, value;
 
                 if (line.includes('|')) {
                     isExtended = true;
                     const pp = line.split('|');
-                    code = pp[0].trim();
-                    const mid = pp[1] || '';
-                    tp     = (pp[2] || '').trim();
-                    bonus  = (pp[3] || '').trim();
-                    tax    = (pp[4] || '').trim();
+                    const mid = pp[0] || '';
+                    tp     = (pp[1] || '').trim();
+                    bonus  = (pp[2] || '').trim();
+                    tax    = (pp[3] || '').trim();
                     const di = mid.indexOf('-----');
                     if (di >= 0) {
                         name  = mid.substring(0, di).trim();
@@ -1303,7 +1301,7 @@
                     value = parts[1] ? parts[1].trim() : '';
                 }
 
-                items.push({ name, value, code, tp, bonus, tax, isExtended, original: line });
+                items.push({ name, value, tp, bonus, tax, isExtended, original: line });
             }
             items.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
             return items;
@@ -1324,18 +1322,15 @@
             const colToggles = document.getElementById('colToggles');
             if (colToggles) colToggles.style.display = items.length > 0 ? 'flex' : 'none';
 
-            // Show/hide Code and Tax toggles (extended-only columns)
-            ['colCode','colTax'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.closest('label').style.display = hasExtended ? '' : 'none';
-            });
+            // Show/hide Tax toggle (extended-only column)
+            const colTaxEl = document.getElementById('colTax');
+            if (colTaxEl) colTaxEl.closest('label').style.display = hasExtended ? '' : 'none';
             const hint = document.getElementById('extendedHint');
             if (hint) hint.style.display = (!hasExtended && items.length > 0) ? 'inline' : 'none';
 
             const chk = id => { const el = document.getElementById(id); return !el || el.checked; };
             const vis = {
                 num:   chk('colNum'),
-                code:  hasExtended && chk('colCode'),
                 name:  chk('colName'),
                 disc:  chk('colDisc'),
                 bonus: chk('colBonus'),
@@ -1348,7 +1343,6 @@
             let headerHtml = '<tr>';
             if (deleteEnabled)  headerHtml += '<th class="col-delete"></th>';
             if (vis.num)   headerHtml += '<th class="col-num">#</th>';
-            if (vis.code)  headerHtml += '<th style="width:65px">Code</th>';
             if (vis.name)  headerHtml += '<th class="col-name">Item Name</th>';
             if (vis.disc)  headerHtml += '<th class="col-value">Disc%</th>';
             if (vis.bonus) headerHtml += '<th class="col-value">Bonus</th>';
@@ -1370,7 +1364,7 @@
                 }
 
                 const da = `data-name="${escapeHtml(item.name)}" data-value="${escapeHtml(item.value)}" `+
-                           `data-code="${escapeHtml(item.code)}" data-tp="${escapeHtml(item.tp)}" `+
+                           `data-tp="${escapeHtml(item.tp)}" `+
                            `data-bonus="${escapeHtml(item.bonus)}" data-tax="${escapeHtml(item.tax)}" `+
                            `data-extended="${item.isExtended ? '1' : '0'}"`;
 
@@ -1387,7 +1381,6 @@
                 const mk = ft => editEnabled ? `onclick="editCellInline(this,'${ft}')"` : '';
 
                 if (vis.num)   rowHtml += `<td class="col-num">${i + 1}</td>`;
-                if (vis.code)  rowHtml += `<td class="${ec}" style="${es}" ${mk('code')}>${item.code}</td>`;
                 if (vis.name)  rowHtml += `<td class="col-name ${ec}" style="${es}" ${mk('name')}>${item.name}</td>`;
                 if (vis.disc)  rowHtml += `<td class="col-value ${ec}" style="${es}" ${mk('value')}>${item.value}</td>`;
                 if (vis.bonus) rowHtml += `<td class="col-value ${ec}" style="${es}" ${mk('bonus')}>${item.bonus}</td>`;
@@ -1682,7 +1675,6 @@
             const itemData = {
                 name: row.dataset.name || '',
                 value: row.dataset.value || '',
-                code: row.dataset.code || '',
                 tp: row.dataset.tp || '',
                 bonus: row.dataset.bonus || '',
                 tax: row.dataset.tax || '',
@@ -1782,7 +1774,7 @@
 
                 // Auto-upgrade to extended if bonus or tp is now set
                 if (u.isExtended || u.bonus || u.tp) {
-                    lines[i] = `${u.code}|${u.name}----- ${u.value}|${u.tp}|${u.bonus}|${u.tax}`;
+                    lines[i] = `${u.name}----- ${u.value}|${u.tp}|${u.bonus}|${u.tax}`;
                 } else {
                     lines[i] = `${u.name}----- ${u.value}`;
                 }
@@ -1868,21 +1860,19 @@
                 return { raw: line, parts: line.split('|').map(p => p.trim()) };
             });
 
-            let maxCode = 0, maxMid = 0;
+            let maxMid = 0;
             parsed.forEach(({ parts }) => {
                 if (!parts) return;
-                maxCode = Math.max(maxCode, (parts[0] || '').length);
-                maxMid  = Math.max(maxMid,  (parts[1] || '').length);
+                maxMid = Math.max(maxMid, (parts[0] || '').length);
             });
 
             return parsed.map(({ raw, parts }) => {
                 if (!parts) return raw;
-                const code = (parts[0] || '').padEnd(maxCode);
-                const mid  = (parts[1] || '').padEnd(maxMid + 12);
-                const tp    = parts[2] || '';
-                const bonus = parts[3] || '';
-                const tax   = parts[4] || '';
-                return `${code} | ${mid} | ${tp} | ${bonus} | ${tax}`;
+                const mid   = (parts[0] || '').padEnd(maxMid + 12);
+                const tp    = parts[1] || '';
+                const bonus = parts[2] || '';
+                const tax   = parts[3] || '';
+                return `${mid} | ${tp} | ${bonus} | ${tax}`;
             }).join('\n');
         }
 
@@ -1933,5 +1923,6 @@
             updatePreview();
         }
     </script>
+    {% include 'chatbot_widget.html' %}
 </body>
 </html>

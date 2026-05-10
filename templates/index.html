@@ -1529,43 +1529,37 @@
 
                 <div class="settings-panel" id="settingsPanel" style="display: none;">
                     <h3 class="section-title">⚙️ Processing Settings</h3>
-                    <div class="input-group">
-                        <label for="decreaseValue">Decrease discount rate by:</label>
-                        <div class="input-row">
-                            <input type="number" id="decreaseValue" value="1" min="0" max="100" step="0.1">
-                            <span class="input-suffix">%</span>
+                    <div class="input-group" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+                        <div>
+                            <label for="decreaseValue">Decrease disc by:</label>
+                            <div class="input-row">
+                                <input type="number" id="decreaseValue" value="1" min="0" max="100" step="0.1">
+                                <span class="input-suffix">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="separatorValue">End line with:</label>
+                            <div class="input-row">
+                                <input type="text" id="separatorValue" value="" placeholder=", or ; or empty">
+                            </div>
                         </div>
                     </div>
-                    <div class="input-group">
-                        <label for="separatorValue">End each line with:</label>
-                        <div class="input-row">
-                            <input type="text" id="separatorValue" value="" placeholder="e.g. , or ; or nothing">
-                        </div>
-                        <small class="input-hint">Leave empty for no separator</small>
-                    </div>
-                    <div class="input-group checkbox-group">
+                    <div class="input-group" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;">
                         <label class="checkbox-label">
                             <input type="checkbox" id="stockFormat">
                             <span class="checkmark"></span>
                             Stock file format
                         </label>
-                        <small class="input-hint">Check this if uploading stock.htm (different column layout)</small>
-                    </div>
-                    <div class="input-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="newFormat">
                             <span class="checkmark"></span>
                             New format
                         </label>
-                        <small class="input-hint">Check this for new_pattern.htm style files (item-row layout)</small>
-                    </div>
-                    <div class="input-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="extendedOutput">
                             <span class="checkmark"></span>
-                            Extended TXT (with code | tp | bonus | tax)
+                            Extended TXT
                         </label>
-                        <small class="input-hint">Off = legacy "Name----- Disc%" output. On = pipe-separated format needed by the Make-HTML "New" generator.</small>
                     </div>
                     <button class="btn btn-primary" id="processBtn">🚀 Process File</button>
                 </div>
@@ -1890,67 +1884,7 @@
                         </div>
                     </div>
                     <h3 class="section-title">📝 Output <span class="edit-hint">(editable)</span></h3>
-                    <div id="editor-container-${fileCount}">
-                        <textarea class="markdown-box" id="markdown-${fileCount}">${data.text_output}</textarea>
-                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <div style="display: flex; align-items: center;">
-                                <input type="checkbox" id="enableDeleteButtons-${fileCount}" onchange="toggleDeleteButtonsMain(${fileCount})">
-                                <label for="enableDeleteButtons-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row deletion</label>
-                            </div>
-                            <button class="btn btn-small" onclick="refreshPreview(${fileCount})" style="padding: 4px 8px; font-size: 11px;">🔄 Refresh Preview</button>
-                        </div>
-
-                        <!-- Columnar view of the parsed output -->
-                        <div id="columnView-${fileCount}" style="margin-top: 14px; display: none;">
-                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; font-size: 12px;">
-                                <strong>Show columns:</strong>
-                                <label><input type="checkbox" data-col="num"   checked onchange="renderColumnTable(${fileCount})"> #</label>
-                                <label><input type="checkbox" data-col="code"  checked onchange="renderColumnTable(${fileCount})"> Code</label>
-                                <label><input type="checkbox" data-col="name"  checked onchange="renderColumnTable(${fileCount})"> Name</label>
-                                <label><input type="checkbox" data-col="disc"  checked onchange="renderColumnTable(${fileCount})"> Disc</label>
-                                <label><input type="checkbox" data-col="bonus"        onchange="renderColumnTable(${fileCount})"> Bonus</label>
-                                <label><input type="checkbox" data-col="tp"           onchange="renderColumnTable(${fileCount})"> T.P</label>
-                                <label><input type="checkbox" data-col="tax"          onchange="renderColumnTable(${fileCount})"> Tax</label>
-                            </div>
-                            <div class="preview-content-main" id="columnTableWrap-${fileCount}"></div>
-                        </div>
-                    </div>
-
-                    <!-- Tabbed interface for editor/preview (same as make_html) -->
-                    <div class="editor-section-main" id="tab-interface-${fileCount}" style="display: none;">
-                        <div class="tabs-main">
-                            <button class="tab-main" id="tabEdit-${fileCount}" onclick="showTabMain('${fileCount}', 'edit')">Edit</button>
-                            <button class="tab-main active" id="tabPreview-${fileCount}" onclick="showTabMain('${fileCount}', 'preview')">Preview</button>
-                        </div>
-
-                        <textarea class="editor-textarea-main" id="editorTextarea-${fileCount}" placeholder="Item Name----- 10%&#10;Another Item----- 5%" style="display: none;">${data.text_output}</textarea>
-
-                        <div style="margin-top: 10px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center;">
-                                <input type="checkbox" id="enableDeleteButtonsTab-${fileCount}" onchange="toggleDeleteButtonsTab(${fileCount})">
-                                <label for="enableDeleteButtonsTab-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row deletion (✕)</label>
-                            </div>
-                            <div style="display: flex; align-items: center;">
-                                <input type="checkbox" id="enableEditButtonsTab-${fileCount}" onchange="toggleEditButtonsTab(${fileCount})" checked>
-                                <label for="enableEditButtonsTab-${fileCount}" style="margin-left: 5px; cursor: pointer;">Enable row editing (✏️)</label>
-                            </div>
-                        </div>
-
-                        <div class="preview-content-main" id="previewContent-${fileCount}" style="display: block;">
-                            <table>
-                                <thead id="previewTableHead-${fileCount}">
-                                    <tr>
-                                        <th class="col-num">#</th>
-                                        <th class="col-name">Item Name</th>
-                                        <th class="col-value">Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="previewTableBody-${fileCount}"></tbody>
-                            </table>
-                        </div>
-
-                        <div class="item-count-main" id="itemCount-${fileCount}">0 items</div>
-                    </div>
+                    <textarea class="markdown-box" id="markdown-${fileCount}">${data.text_output}</textarea>
                     <div class="actions">
                         <button class="btn btn-copy btn-small" onclick="copyToClipboard(${fileCount}, this)">
                             📋 Copy
@@ -1977,12 +1911,12 @@
             resultsContainer.insertAdjacentHTML('beforeend', cardHtml);
             hideNewEditorSection();
 
-            // Initial render of the columnar view + auto-refresh on edit.
+            // No preview table on this page — editing done on Make HTML page
             const _fc = fileCount;
+            // Align columns in the output box if extended format
             const _ta = document.getElementById(`markdown-${_fc}`);
-            if (_ta) {
-                renderColumnTable(_fc);
-                _ta.addEventListener('input', () => renderColumnTable(_fc));
+            if (_ta && _ta.value.includes('|')) {
+                _ta.value = alignOutputColumns(_ta.value);
             }
 
             // Check if max files reached
@@ -2461,15 +2395,36 @@
             document.body.removeChild(tempTextarea);
         }
 
+        // Align pipe-delimited columns (Name----- disc%|tp|bonus|tax) with readable spacing
+        function alignOutputColumns(text) {
+            const lines = text.split('\n');
+            const parsed = lines.map(line => {
+                if (!line.trim() || !line.includes('|')) return { raw: line, parts: null };
+                return { raw: line, parts: line.split('|').map(p => p.trim()) };
+            });
+            let maxMid = 0;
+            parsed.forEach(({ parts }) => {
+                if (!parts) return;
+                maxMid = Math.max(maxMid, (parts[0] || '').length);
+            });
+            return parsed.map(({ raw, parts }) => {
+                if (!parts) return raw;
+                const mid   = (parts[0] || '').padEnd(maxMid + 4);
+                const tp    = parts[1] || '';
+                const bonus = parts[2] || '';
+                const tax   = parts[3] || '';
+                return `${mid} | ${tp} | ${bonus} | ${tax}`;
+            }).join('\n');
+        }
+
         function copyToClipboard(index, btn) {
-            const textarea = document.getElementById(`markdown-${index}`);
-            const content = textarea.value;
-            copyText(content, btn);
+            const ta = document.getElementById(`markdown-${index}`);
+            copyText(ta ? ta.value : '', btn);
         }
 
         function sortAlphabetically(index) {
-            const textarea = document.getElementById(`markdown-${index}`);
-            sortTextarea(textarea);
+            const ta = document.getElementById(`editorTextarea-${index}`) || document.getElementById(`markdown-${index}`);
+            if (ta) { sortTextarea(ta); updateMainPagePreview(index); }
         }
 
         function sortEditorAlphabetically(editorId) {
@@ -2485,8 +2440,8 @@
         }
 
         function downloadFile(index, originalFilename) {
-            const textarea = document.getElementById(`markdown-${index}`);
-            const content = textarea.value;
+            const textarea = document.getElementById(`editorTextarea-${index}`) || document.getElementById(`markdown-${index}`);
+            const content = textarea ? textarea.value : '';
             const blob = new Blob([content], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2685,67 +2640,9 @@
             redirectToMakeHTML(index);
         }
 
-        // Toggle delete buttons for main page - show tabbed interface
-        function toggleDeleteButtonsMain(id) {
-            const checkbox = document.getElementById(`enableDeleteButtons-${id}`);
-            const editorContainer = document.getElementById(`editor-container-${id}`);
-            const tabInterface = document.getElementById(`tab-interface-${id}`);
-
-            // Get the original content from the original textarea
-            const originalTextarea = document.getElementById(`markdown-${id}`);
-            let originalContent = '';
-            if (originalTextarea) {
-                originalContent = originalTextarea.value;
-            }
-
-            if (checkbox.checked) {
-                // Show tabbed interface
-                if (editorContainer) editorContainer.style.display = 'none';
-                if (tabInterface) {
-                    tabInterface.style.display = 'block';
-
-                    // Initialize the editor textarea with content
-                    const editorTextarea = document.getElementById(`editorTextarea-${id}`);
-                    if (editorTextarea) {
-                        editorTextarea.value = originalContent;
-
-                        // Setup input listener for this specific editor
-                        setupMainPageInputListener(id);
-
-                        // Update item count and preview
-                        updateMainPageItemCount(id);
-
-                        // Update the preview to show the content (without delete buttons initially)
-                        updateMainPagePreview(id);
-
-                        // Make sure preview tab is active by default
-                        const tabEdit = document.getElementById(`tabEdit-${id}`);
-                        const tabPreview = document.getElementById(`tabPreview-${id}`);
-                        const preview = document.getElementById(`previewContent-${id}`);
-
-                        if (tabEdit && tabPreview) {
-                            tabEdit.classList.remove('active');
-                            tabPreview.classList.add('active');
-                        }
-
-                        if (editorTextarea && preview) {
-                            editorTextarea.style.display = 'none';
-                            preview.style.display = 'block';
-                        }
-                    }
-                }
-            } else {
-                // Hide tabbed interface and show original editor
-                if (editorContainer) editorContainer.style.display = 'block';
-                if (tabInterface) tabInterface.style.display = 'none';
-
-                // Sync content back to original textarea if needed
-                const editorTextarea = document.getElementById(`editorTextarea-${id}`);
-                if (editorTextarea && originalTextarea) {
-                    originalTextarea.value = editorTextarea.value;
-                }
-            }
-        }
+        function toggleDeleteButtonsMain(id) { /* no-op, kept for compat */ }
+        function toggleDeleteButtonsTab(id) { /* no-op, kept for compat */ }
+        function toggleEditButtonsTab(id) { /* no-op, kept for compat */ }
 
         // Show tab for main page
         function showTabMain(id, tab) {
@@ -2790,89 +2687,48 @@
             return items;
         }
 
-        // Update preview for main page (same as make_html)
+        // Update preview for main page
         function updateMainPagePreview(id) {
-            const editorTextarea = document.getElementById(`editorTextarea-${id}`);
+            const editorTextarea = document.getElementById(`markdown-${id}`);
             if (!editorTextarea) return;
 
             const items = parseMainPageItems(editorTextarea.value, id);
             const tbody = document.getElementById(`previewTableBody-${id}`);
-            const thead = document.getElementById(`previewTableHead-${id}`);
-
-            // Check if delete and edit buttons are currently enabled
-            const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
-            const deleteButtonsEnabled = deleteCheckbox && deleteCheckbox.checked;
-            const editCheckbox = document.getElementById(`enableEditButtonsTab-${id}`);
-            const editButtonsEnabled = editCheckbox && editCheckbox.checked;
-
-            // Update header based on delete button state
-            if (thead) {
-                let headerHtml = '<tr>';
-                if (deleteButtonsEnabled) {
-                    headerHtml += '<th class="col-delete"></th>';
-                }
-                headerHtml += `<th class="col-num">#</th>
-                    <th class="col-name">Item Name</th>
-                    <th class="col-value">Value</th>
-                </tr>`;
-                thead.innerHTML = headerHtml;
-            }
 
             let html = '';
             let currentLetter = '';
-
-            // Calculate colspan based on delete button only
-            let extraCols = deleteButtonsEnabled ? 1 : 0;
 
             items.forEach((item, i) => {
                 const firstLetter = item.name.charAt(0).toUpperCase();
                 if (firstLetter !== currentLetter) {
                     currentLetter = firstLetter;
                     html += `<tr style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color: white;">
-                        <td colspan="${3 + extraCols}" style="text-align: center; font-weight: bold; padding: 8px;">${currentLetter}</td>
+                        <td colspan="4" style="text-align:center;font-weight:bold;padding:8px;">${currentLetter}</td>
                     </tr>`;
                 }
 
-                let rowHtml = '<tr>';
-
-                // Add delete button if enabled
-                if (deleteButtonsEnabled) {
-                    rowHtml += `<td class="col-delete">
+                html += `<tr>
+                    <td class="col-delete">
                         <button class="delete-btn" onclick="deleteRowMainPage('${id}', this.closest('tr'))"
-                            style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto;"
-                            title="Delete this row">✕</button>
-                    </td>`;
-                }
-
-                // Make name and value cells clickable for inline editing if enabled
-                const editableStyle = editButtonsEnabled ? 'cursor: pointer;' : '';
-                const editableClass = editButtonsEnabled ? 'editable-cell' : '';
-                const nameClick = editButtonsEnabled ? `onclick="editCellInlineMainPage('${id}', this, 'name', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')"` : '';
-                const valueClick = editButtonsEnabled ? `onclick="editCellInlineMainPage('${id}', this, 'value', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')"` : '';
-
-                rowHtml += `<td class="col-num">${i + 1}</td>
-                    <td class="col-name ${editableClass}" style="${editableStyle}" ${nameClick}>${item.name}</td>
-                    <td class="col-value ${editableClass}" style="${editableStyle}" ${valueClick}>${item.value}</td>
+                            style="background:#dc3545;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;margin:0 auto;"
+                            title="Delete">✕</button>
+                    </td>
+                    <td class="col-num">${i + 1}</td>
+                    <td class="col-name editable-cell" style="cursor:pointer;" onclick="editCellInlineMainPage('${id}', this, 'name', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')">${item.name}</td>
+                    <td class="col-value editable-cell" style="cursor:pointer;" onclick="editCellInlineMainPage('${id}', this, 'value', '${escapeHtmlMainPage(item.name)}', '${escapeHtmlMainPage(item.value)}')">${item.value}</td>
                 </tr>`;
-
-                html += rowHtml;
             });
 
-            if (tbody) {
-                tbody.innerHTML = html;
-            }
+            if (tbody) tbody.innerHTML = html;
         }
 
         // Update item count for main page
         function updateMainPageItemCount(id) {
-            const editorTextarea = document.getElementById(`editorTextarea-${id}`);
-            if (!editorTextarea) return;
-
-            const items = parseMainPageItems(editorTextarea.value, id);
+            const ta = document.getElementById(`markdown-${id}`);
+            if (!ta) return;
+            const items = parseMainPageItems(ta.value, id);
             const itemCountElement = document.getElementById(`itemCount-${id}`);
-            if (itemCountElement) {
-                itemCountElement.textContent = `${items.length} items`;
-            }
+            if (itemCountElement) itemCountElement.textContent = `${items.length} items`;
         }
 
         // Toggle delete buttons for main page preview - show X buttons when checkbox is checked
@@ -3037,7 +2893,7 @@
             }
 
             // Update the textarea
-            const textarea = document.getElementById(`editorTextarea-${id}`);
+            const textarea = document.getElementById(`markdown-${id}`);
             if (!textarea) {
                 savingInProgress = false;
                 checkPendingEditMainPage();
@@ -3060,12 +2916,6 @@
             }
 
             textarea.value = lines.join('\n');
-
-            // Also update the original markdown textarea
-            const originalTextarea = document.getElementById(`markdown-${id}`);
-            if (originalTextarea) {
-                originalTextarea.value = textarea.value;
-            }
 
             // Update item count and refresh preview
             updateMainPageItemCount(id);
@@ -3090,12 +2940,9 @@
                         // Skip header rows (single cell spanning multiple columns)
                         if (cells.length < 3) continue;
 
-                        // Find the name and value cells
-                        const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
-                        const offset = (deleteCheckbox && deleteCheckbox.checked) ? 1 : 0;
-
-                        const nameCell = cells[offset + 1];
-                        const valueCell = cells[offset + 2];
+                        // Structure: [delete] [#] [name] [value]
+                        const nameCell = cells[2];
+                        const valueCell = cells[3];
 
                         // Decode HTML entities for comparison
                         const cellText = nameCell ? nameCell.textContent.trim() : '';
@@ -3120,67 +2967,28 @@
 
         // Delete a row from main page preview (same concept as make_html)
         function deleteRowMainPage(id, row) {
-            // Get the item details from the row
             const cells = row.querySelectorAll('td');
-
-            // Check if delete button is enabled to determine column structure
-            const deleteCheckbox = document.getElementById(`enableDeleteButtonsTab-${id}`);
-            const deleteEnabled = deleteCheckbox && deleteCheckbox.checked;
-
-            // Calculate offset: [delete?] # name value
-            let offset = deleteEnabled ? 1 : 0;
-
-            if (cells.length >= 3 + offset) {
-                const itemName = cells[offset + 1].textContent.trim();
-                const itemValue = cells[offset + 2].textContent.trim();
-
-                removeLineFromMainPageTextarea(id, itemName, itemValue);
-            }
-        }
-
-        // Helper function to remove a line from main page textarea
-        function removeLineFromMainPageTextarea(id, itemName, itemValue) {
-            // Get current text content from textarea
-            const textarea = document.getElementById(`editorTextarea-${id}`);
-            if (!textarea) return;
-
-            let content = textarea.value;
-
-            // Create the line pattern to remove
-            const linePattern = new RegExp(`^.*${escapeRegExp(itemName)}.*-----.*${escapeRegExp(itemValue)}.*$`, 'gm');
-
-            // Remove the matching line(s)
-            content = content.replace(linePattern, '').trim();
-            content = content.replace(/^\s*[\r\n]/gm, ''); // Clean up empty lines
-
-            // Update textarea
-            textarea.value = content;
-
-            // Update item count and preview
-            updateMainPageItemCount(id);
-            updateMainPagePreview(id);
-
-            // Also update the original textarea
-            const originalTextarea = document.getElementById(`markdown-${id}`);
-            if (originalTextarea) {
-                originalTextarea.value = content;
+            // Structure: [delete] [#] [name] [value]
+            if (cells.length >= 4) {
+                const itemName = cells[2].textContent.trim();
+                const itemValue = cells[3].textContent.trim();
+                const ta = document.getElementById(`markdown-${id}`);
+                if (!ta) return;
+                const linePattern = new RegExp(`^.*${escapeRegExp(itemName)}.*-----.*${escapeRegExp(itemValue)}.*$`, 'gm');
+                ta.value = ta.value.replace(linePattern, '').replace(/^\s*[\r\n]/gm, '').trim();
+                updateMainPageItemCount(id);
+                updateMainPagePreview(id);
             }
         }
 
         // Setup input listener for main page editor
         function setupMainPageInputListener(id) {
-            const editorTextarea = document.getElementById(`editorTextarea-${id}`);
-            if (editorTextarea) {
-                // Remove any existing listeners to avoid duplicates
-                const newEditor = editorTextarea.cloneNode(true);
-                editorTextarea.parentNode.replaceChild(newEditor, editorTextarea);
-
-                const clonedEditor = document.getElementById(`editorTextarea-${id}`);
-                if (clonedEditor) {
-                    clonedEditor.addEventListener('input', function() {
-                        updateMainPageItemCount(id);
-                    });
-                }
+            const ta = document.getElementById(`markdown-${id}`);
+            if (ta) {
+                ta.addEventListener('input', function() {
+                    updateMainPageItemCount(id);
+                    updateMainPagePreview(id);
+                });
             }
         }
 
@@ -3225,8 +3033,8 @@
 
         /* ===== Columnar output view (Old TXT + Extended TXT) ===== */
 
-        // Parse one TXT line into {code, name, disc, bonus, tp, tax}.
-        // Accepts both legacy "Name----- 5%," and extended "code|Name----- 5%|tp|bonus|tax".
+        // Parse one TXT line into {name, disc, bonus, tp, tax}.
+        // Accepts both legacy "Name----- 5%," and extended "Name----- 5%|tp|bonus|tax".
         function parseLineForColumns(line) {
             line = line.trim();
             if (!line) return null;
@@ -3236,16 +3044,15 @@
             // Strip trailing comma/semicolon separators (writer adds them).
             while (line.endsWith(',') || line.endsWith(';')) line = line.slice(0, -1).trim();
 
-            let code = '', name = '', disc = '', bonus = '', tp = '', tax = '';
+            let name = '', disc = '', bonus = '', tp = '', tax = '';
             let nameValuePart = line;
 
             if (line.includes('|')) {
                 const parts = line.split('|');
-                code = (parts[0] || '').trim();
-                nameValuePart = parts[1] || '';
-                tp    = (parts[2] || '').trim();
-                bonus = (parts[3] || '').trim();
-                tax   = (parts[4] || '').trim() || '0.00';
+                nameValuePart = parts[0] || '';
+                tp    = (parts[1] || '').trim();
+                bonus = (parts[2] || '').trim();
+                tax   = (parts[3] || '').trim() || '0.00';
             }
 
             const sep = nameValuePart.indexOf('-----');
@@ -3256,7 +3063,7 @@
                 disc = nameValuePart.slice(sep + 5).trim();
                 while (disc.endsWith(',') || disc.endsWith(';')) disc = disc.slice(0, -1).trim();
             }
-            return { code, name, disc, bonus, tp, tax };
+            return { name, disc, bonus, tp, tax };
         }
 
         // Render the column-table view for one result card.
@@ -3320,5 +3127,6 @@
             setupPreviewRefresh();
         });
     </script>
+    {% include 'chatbot_widget.html' %}
 </body>
 </html>

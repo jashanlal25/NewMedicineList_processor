@@ -34,6 +34,9 @@ app = Flask(__name__, static_folder=os.path.join(os.path.dirname(os.path.abspath
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.secret_key = 'medicinesearch_supersecret_key'  # Needed for sessions
 
+from chatbot_bp import chatbot_bp
+app.register_blueprint(chatbot_bp)
+
 # Store processed results temporarily
 processed_results = {}
 
@@ -177,18 +180,17 @@ def generate_text_output(results, separator=',', extended=False):
     """Generate text file content from results.
 
     extended=False -> 'Name----- Disc%,'  (legacy, byte-compatible with old behaviour)
-    extended=True  -> 'code|Name----- Disc%|tp|bonus|tax'  (no trailing separator)
+    extended=True  -> 'Name----- Disc%|tp|bonus|tax'  (no trailing separator)
     """
     lines = []
     for item in results:
         discount = item['discount']
         if extended:
-            code = item.get('code', '') or ''
             tp = item.get('tp', '') or ''
             bonus = item.get('bonus', '') or ''
             tax = item.get('tax', '') or '0.00'
             disc_field = f"{discount}{separator}" if separator and not discount.endswith(separator) else discount
-            output_line = f"{code}|{item['name']}----- {disc_field}|{tp}|{bonus}|{tax}"
+            output_line = f"{item['name']}----- {disc_field}|{tp}|{bonus}|{tax}"
         else:
             if separator and not discount.endswith(separator):
                 output_line = f"{item['name']}----- {discount}{separator}"
@@ -316,8 +318,9 @@ def parse_text_content(text_content):
 def parse_text_content_extended(text_content):
     """Parse text content and return a list of dicts with all fields.
 
-    Each dict has: name, value, code, tp, bonus, tax.
-    Legacy lines (without '|') still parse: code/tp/bonus default empty, tax='0.00'.
+    Each dict has: name, value, tp, bonus, tax.
+    Format: 'Name----- Disc%|tp|bonus|tax'
+    Legacy lines (without '|') still parse: tp/bonus default empty, tax='0.00'.
     """
     items = []
     for line in text_content.split('\n'):
@@ -327,19 +330,18 @@ def parse_text_content_extended(text_content):
         if '→' in line:
             line = line.split('→', 1)[1]
 
-        code, tp, bonus, tax = "", "", "", "0.00"
+        tp, bonus, tax = "", "", "0.00"
 
         if '|' in line:
             parts_pipe = line.split('|')
-            # Expected layout: code | name----- disc% | tp | bonus | tax
-            code = parts_pipe[0].strip()
-            name_value_part = parts_pipe[1] if len(parts_pipe) > 1 else line
+            # Layout: name----- disc% | tp | bonus | tax
+            name_value_part = parts_pipe[0]
+            if len(parts_pipe) > 1:
+                tp = parts_pipe[1].strip()
             if len(parts_pipe) > 2:
-                tp = parts_pipe[2].strip()
-            if len(parts_pipe) > 3:
-                bonus = parts_pipe[3].strip()
-            if len(parts_pipe) > 4 and parts_pipe[4].strip():
-                tax = parts_pipe[4].strip()
+                bonus = parts_pipe[2].strip()
+            if len(parts_pipe) > 3 and parts_pipe[3].strip():
+                tax = parts_pipe[3].strip()
             line_for_namevalue = name_value_part
         else:
             line_for_namevalue = line
@@ -350,12 +352,10 @@ def parse_text_content_extended(text_content):
         name_part, _, value_part = line_for_namevalue.partition('-----')
         name = name_part.strip()
         value = value_part.strip()
-        # Keep separator intact so it shows in generated HTML
 
         items.append({
             'name': name,
             'value': value,
-            'code': code,
             'tp': tp,
             'bonus': bonus,
             'tax': tax,

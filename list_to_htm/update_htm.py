@@ -496,14 +496,18 @@ def _new_format_item_row(serial, code, name, disc_num, bonus, tp, tax, list_no="
     disc_str = f"{disc_num:.2f}"
     # Show the original value string (e.g. "14.00%,") if available, else fall back to formatted number
     disc_disp = disc_raw.strip() if disc_raw and disc_raw.strip() else f"{disc_str}%"
+    # Extract trailing suffix after % (e.g. "," or ".") to preserve in WhatsApp/PDF
+    _suffix_m = re.search(r'%(.+)$', disc_raw.strip()) if disc_raw else None
+    disc_suffix = _suffix_m.group(1).strip() if _suffix_m else ""
     tp_str = f"{float(tp):.2f}" if tp else "0.00"
     tax_str = f"{float(tax):.2f}" if tax else "0.00"
     bonus_attr = (bonus or "").strip()
     name_disp = name.strip()
 
     return (
-        f'<tr class="item-row" data-id="{data_id}" data-tp="{tp_str}" '
-        f'data-disc="{disc_str}" data-bonus="{bonus_attr}" data-tax="{tax_str}">'
+        f'<tr class="item-row" data-id="{data_id}" data-code="{code_disp}" data-name="{name_disp}" '
+        f'data-tp="{tp_str}" data-disc="{disc_str}" data-disc-suffix="{disc_suffix}" '
+        f'data-bonus="{bonus_attr}" data-tax="{tax_str}">'
         f'<td class="first-col"> {code_disp} </td>'
         f'<td class="cell-name">{name_disp}</td>'
         f'<td><div class="qty-wrap"><input class="qty-input" type="number" min="0" max="5000" '
@@ -550,7 +554,7 @@ def generate_html_new_format(template_path, items_extended, list_no="000001",
         disc_num = _parse_disc_to_num(disc_raw)
         items_html += _new_format_item_row(
             serial=i,
-            code=it.get('code') or str(i),
+            code=str(i),
             name=name,
             disc_num=disc_num,
             disc_raw=disc_raw,

@@ -822,7 +822,7 @@ function buildWaMessage(payload){
     var it = payload.items[i];
     msg += "*Code* : " + it.code + "\n";
     msg += "*QTY*  : " + it.qty + "\n";
-    msg += "*Disc* : " + it.disc + "%\n";
+    msg += "*Disc* : " + it.disc + "%" + (it.discSuffix || "") + "\n";
     msg += "*Bonus*: " + it.bonus + "\n";
     msg += "*ITM*  : " + it.name + "\n";
     msg += "--------------------\n";
@@ -854,15 +854,13 @@ function buildOrderPayload(){
     var q = inp ? (parseInt(inp.value, 10) || 0) : 0;
     if (q <= 0) continue;
 
-    var code = "";
-    var name = "";
+    var code = String(r.getAttribute("data-code") || "").trim();
+    var name = String(r.getAttribute("data-name") || "").trim();
 
-    if (r.children[0]) code = trimText(r.children[0].textContent);
-    if (r.children[1]) name = trimText(r.children[1].textContent);
-
-    var tp    = toNum(r.getAttribute("data-tp"));
-    var disc  = toNum(r.getAttribute("data-disc"));
-    var tax   = toNum(r.getAttribute("data-tax"));
+    var tp         = toNum(r.getAttribute("data-tp"));
+    var disc       = toNum(r.getAttribute("data-disc"));
+    var discSuffix = String(r.getAttribute("data-disc-suffix") || "").trim();
+    var tax        = toNum(r.getAttribute("data-tax"));
 var bonus = String(r.getAttribute("data-bonus") || "").trim(); // bonus as string
 
     var gross = q * tp;
@@ -878,6 +876,7 @@ var bonus = String(r.getAttribute("data-bonus") || "").trim(); // bonus as strin
       qty: q,
       tp: tp,
       disc: disc,
+      discSuffix: discSuffix,
       bonus: bonus,
       tax: tax,
       lineNet: Number(fmt2(lineNet))
@@ -959,7 +958,7 @@ if (btnPrepare){
 
     function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function fN(n){ var x=parseFloat(n); if(!isFinite(x)) return '0.00'; return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-    function fD(n){ var x=parseFloat(n); return (!isFinite(x)||x===0)?'&mdash;':x.toFixed(2); }
+    function fD(n,sfx){ var x=parseFloat(n); return (!isFinite(x)||x===0)?'&mdash;':x.toFixed(2)+'%'+(sfx||''); }
     function fB(s){ var t=String(s==null?'':s).trim(); if(!t) return '&mdash;'; var l=t.replace(/\s+/g,'').toLowerCase(); return (l==='0'||l==='0.0'||l==='0.00')?'&mdash;':esc(t); }
     function fT(n){ var x=parseFloat(n); return (!isFinite(x)||x===0)?'&mdash;':x.toFixed(2); }
 
@@ -971,7 +970,7 @@ if (btnPrepare){
         '<td class="nm">' + esc(it.name) + '</td>' +
         '<td class="r">' + (parseInt(it.qty,10)||0) + '</td>' +
         '<td class="r">' + fN(it.tp) + '</td>' +
-        '<td class="r">' + fD(it.disc) + '</td>' +
+        '<td class="r">' + fD(it.disc, it.discSuffix) + '</td>' +
         '<td class="r">' + fB(it.bonus) + '</td>' +
         '<td class="r">' + fT(it.tax) + '</td>' +
         '<td class="r">' + fN(it.lineNet) + '</td>' +
@@ -1012,15 +1011,15 @@ if (btnPrepare){
       '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
       '<script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"><\/script>' +
       '</head><body style="margin:0;padding:0;background:#fff;">' +
-      '<div id="pg" style="width:794px;padding:36px 48px;background:#fff;font-family:Arial,sans-serif;">' +
+      '<div id="pg" style="width:210mm;padding:15mm 18mm;background:#fff;font-family:Arial,sans-serif;box-sizing:border-box;">' +
         content +
       '</div>' +
       '<script>window.onload=function(){' +
         'html2pdf().set({' +
           'filename:"' + filename.replace(/\\/g,'\\\\').replace(/"/g,'\\"') + '",' +
           'margin:0,' +
-          'html2canvas:{scale:2,backgroundColor:"#fff",logging:false,useCORS:true,width:794},' +
-          'jsPDF:{unit:"px",format:[794,1123],orientation:"portrait"}' +
+          'html2canvas:{scale:2,backgroundColor:"#fff",logging:false,useCORS:true},' +
+          'jsPDF:{unit:"mm",format:"a4",orientation:"portrait"}' +
         '}).from(document.getElementById("pg")).save()' +
         '.then(function(){setTimeout(function(){window.close();},300);});' +
       '}<\/script>' +
@@ -1077,7 +1076,7 @@ if (btnPrepare){
       rowsHtml += "<td>" + escapeHtml(it.code) + "</td>";
       rowsHtml += "<td style='font-weight:400;white-space:normal;'>" + escapeHtml(it.name) + "</td>";
       if (showQty)   rowsHtml += "<td style='text-align:right'>" + int0(it.qty) + "</td>";
-      if (showDisc)  rowsHtml += "<td style='text-align:right'>" + fmt2(it.disc) + "%</td>";
+      if (showDisc)  rowsHtml += "<td style='text-align:right'>" + fmt2(it.disc) + "%" + (it.discSuffix||"") + "</td>";
       if (showBonus) rowsHtml += "<td style='text-align:right'>" + escapeHtml(it.bonus) + "</td>";
       if (showTP)    rowsHtml += "<td style='text-align:right'>" + fmt2(it.tp) + "</td>";
       if (showTax)   rowsHtml += "<td style='text-align:right'>" + fmt2(it.tax) + "</td>";
