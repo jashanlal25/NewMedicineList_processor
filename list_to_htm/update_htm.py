@@ -17,6 +17,10 @@ def parse_data_txt(filepath):
                 items.append((item_name, value))
     return items
 
+def _is_suffix_only(s):
+    """True if string is purely trailing punctuation like ',' or '.' — not real bonus info."""
+    return bool(s) and all(c in ',.;: ' for c in s.strip())
+
 def parse_discount_value(value):
     """Parse discount/bonus value and return (discount_num, bonus_str)
 
@@ -176,13 +180,19 @@ var ITMDISC{i} = {discount_str};
 var namevar{i}=document.getElementById("nameid{i}").value;
 '''
         else:
-            # For numeric values
-            bonus_str = f'"{bonus}"' if bonus else '""'
+            # For numeric values — separate trailing suffix (,/.) from real bonus
+            if _is_suffix_only(bonus):
+                suffix_str = f'"{bonus.strip()}"'
+                bonus_str  = '""'
+            else:
+                suffix_str = '""'
+                bonus_str  = f'"{bonus}"' if bonus else '""'
             js_vars += f'''
 var ITMCODE{i} = "{i}";
 var ITMNAME{i} =document.getElementById("itnameid{i}").value;
 var ITMBONUS{i} = {bonus_str};
 var ITMDISC{i} = "{discount:.2f}";
+var ITMDISCSUFFIX{i} = {suffix_str};
 var namevar{i}=document.getElementById("nameid{i}").value;
 '''
     return js_vars
@@ -232,12 +242,17 @@ var namevarr{i} = " ";
 // Don't append % to NET values
 '''
         else:
-            # For numeric values
-            bonus_str = f'"{bonus}"' if bonus else '""'
+            # For numeric values — suffix (,/.) goes into ITMDISC, real bonus into ITMBONUS
+            if _is_suffix_only(bonus):
+                disc_display = f'"{discount:.2f}%{bonus.strip()}"'
+                bonus_str    = '""'
+            else:
+                disc_display = f'"{discount:.2f}%"'
+                bonus_str    = f'"{bonus}"' if bonus else '""'
             js_vars += f'''var ITMCODE{i} = "{i}";
 var ITMNAME{i} =document.getElementById("itnameid{i}").value;
 var ITMBONUS{i} = {bonus_str};
-var ITMDISC{i} = "{discount:.2f}%";
+var ITMDISC{i} = {disc_display};
 var namevar{i}=document.getElementById("nameid{i}").value;
 
 var namevarr{i} = " ";
@@ -269,13 +284,18 @@ var ITMDISC{i} = {discount_str};
 var namevar{i}=document.getElementById("nameid{i}").value;
 '''
         else:
-            # For numeric values
-            bonus_str = f'"{bonus}"' if bonus else '""'
+            if _is_suffix_only(bonus):
+                suffix_str = f'"{bonus.strip()}"'
+                bonus_str  = '""'
+            else:
+                suffix_str = '""'
+                bonus_str  = f'"{bonus}"' if bonus else '""'
             js_vars += f'''
 var ITMCODE{i} = "{i}";
 var ITMNAME{i} =document.getElementById("itnameid{i}").value;
 var ITMBONUS{i} = {bonus_str};
 var ITMDISC{i} =       {discount:8.2f}    ;
+var ITMDISCSUFFIX{i} = {suffix_str};
 var namevar{i}=document.getElementById("nameid{i}").value;
 '''
     return js_vars
@@ -322,7 +342,7 @@ var serial = (serial+1);
  {window_var}.document.write(namevar{i});
  {window_var}.document.write('</td><td align="right">');
  {window_var}.document.write(ITMDISC{i});
- {window_var}.document.write(' %</td><td align="center">');
+ {window_var}.document.write(' %' + (typeof ITMDISCSUFFIX{i} !== "undefined" ? ITMDISCSUFFIX{i} : "") + '</td><td align="center">');
  {window_var}.document.write(ITMBONUS{i});
  {window_var}.document.write('</td></tr>');
 }}
@@ -384,7 +404,7 @@ if(text == "") {{
 var serial = (serial+1);
 
  // Show discount with % if non-zero, otherwise show empty in discount column
- var discText = ITMDISC{i} != 0 ? ITMDISC{i} + "%" : "";
+ var discText = ITMDISC{i} != 0 ? ITMDISC{i} + "%" + (typeof ITMDISCSUFFIX{i} !== "undefined" ? ITMDISCSUFFIX{i} : "") : "";
  // Show bonus in bonus column if discount is 0, otherwise show empty
  var bonusText = ITMDISC{i} == 0 ? ITMBONUS{i} : "";
  var text=text+"|"+ITMCODE{i}+"%20|%20"+namevar{i}+"%20|%20"+ITMNAME{i}+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a";
@@ -414,7 +434,7 @@ else {{
 var serial = (serial+1);
 
  // Show discount with % if non-zero, otherwise show empty in discount column
- var discText = ITMDISC{i} != 0 ? ITMDISC{i} + "%" : "";
+ var discText = ITMDISC{i} != 0 ? ITMDISC{i} + "%" + (typeof ITMDISCSUFFIX{i} !== "undefined" ? ITMDISCSUFFIX{i} : "") : "";
  // Show bonus in bonus column if discount is 0, otherwise show empty
  var bonusText = ITMDISC{i} == 0 ? ITMBONUS{i} : "";
  var text=text+"|"+ITMCODE{i}+"%20|%20"+namevar{i}+"%20|%20"+ITMNAME{i}+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a"+"%0a*Total* *Items* : "+serial;
@@ -444,7 +464,7 @@ else {{
 var serial = (serial+1);
 
  // Show discount with % if non-zero, otherwise show empty in discount column
- var discText = ITMDISC{i} != 0 ? ITMDISC{i} + "%" : "";
+ var discText = ITMDISC{i} != 0 ? ITMDISC{i} + "%" + (typeof ITMDISCSUFFIX{i} !== "undefined" ? ITMDISCSUFFIX{i} : "") : "";
  // Show bonus in bonus column if discount is 0, otherwise show empty
  var bonusText = ITMDISC{i} == 0 ? ITMBONUS{i} : "";
  var text=text+"|"+ITMCODE{i}+"%20|%20"+namevar{i}+"%20|%20"+ITMNAME{i}+"%20|%20"+discText+"%20|%20"+bonusText+"%20|%0a--------------------%0a";
