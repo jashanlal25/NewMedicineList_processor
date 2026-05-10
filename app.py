@@ -6,6 +6,7 @@ import io
 import re
 import sys
 import json
+import secrets
 
 # Add list_to_htm to path for importing update_htm functions
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'list_to_htm'))
@@ -33,13 +34,37 @@ def decompress_if_needed(data):
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'), static_url_path='/static')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-insecure-key')
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 from chatbot_bp import chatbot_bp
 app.register_blueprint(chatbot_bp)
 
-# Store processed results temporarily
-processed_results = {}
+# UUID-keyed result store. Keys are unguessable tokens returned to the originating
+# client — no shared fixed keys that one user could use to read another's data.
+RESULT_TTL = 300  # seconds
+processed_results = {}  # {token: {'data': ..., 'expires_at': float}}
+
+
+def _store_result(data: dict) -> str:
+    import time as _t
+    token = secrets.token_urlsafe(32)
+    now = _t.time()
+    expired = [k for k, v in processed_results.items() if v['expires_at'] < now]
+    for k in expired:
+        del processed_results[k]
+    processed_results[token] = {'data': data, 'expires_at': now + RESULT_TTL}
+    return token
+
+
+def _get_result(token: str):
+    import time as _t
+    entry = processed_results.get(token)
+    if not entry:
+        return None
+    if _t.time() > entry['expires_at']:
+        del processed_results[token]
+        return None
+    return entry['data']
 
 def _fmt_tp(text):
     """Strip text to a clean numeric TP string like '2188.75'. Returns '' if non-numeric."""
@@ -249,30 +274,30 @@ def upload_file():
     results = process_htm_content(html_content, decrease_value, stock_format, new_format)
     text_output = generate_text_output(results, separator, extended=extended_output)
 
-    # Store for download
     filename_base = os.path.splitext(secure_filename(file.filename))[0]
     output_filename = f"{filename_base}_name_with_%.txt"
-    processed_results['latest'] = {
+    token = _store_result({
         'text': text_output,
         'filename': output_filename,
         'results': results
-    }
+    })
 
     return jsonify({
         'success': True,
         'results': results,
         'text_output': text_output,
         'filename': output_filename,
+        'download_token': token,
         'count': len(results),
         'decrease_value': decrease_value
     })
 
 @app.route('/download')
 def download_file():
-    if 'latest' not in processed_results:
-        return "No file to download", 404
+    data = _get_result(request.args.get('token', ''))
+    if not data:
+        return "No file to download or token expired", 404
 
-    data = processed_results['latest']
     buffer = io.BytesIO()
     buffer.write(data['text'].encode('utf-8'))
     buffer.seek(0)
@@ -540,20 +565,18 @@ def generate_html():
     if not file.filename.lower().endswith(('.txt', '.md', '.text')):
         return jsonify({'error': 'Please upload a text file (.txt)'}), 400
 
-    # Get form parameters
-    list_no = request.form.get('list_no', '000001')
+    # Sanitise inputs that get embedded into generated HTML/JS
+    list_no = re.sub(r'[^A-Za-z0-9\-_]', '', request.form.get('list_no', '000001'))[:20] or '000001'
     list_date = request.form.get('list_date', None)
-    title = request.form.get('title', 'S.S.D PHARMA')
+    title = re.sub(r'[<>"\'&]', '', request.form.get('title', 'S.S.D PHARMA'))[:80] or 'S.S.D PHARMA'
     whatsapp_number = request.form.get('whatsapp_number', '923337068868')
-    message = request.form.get('message', '')
+    message = re.sub(r'<[^>]*>', '', request.form.get('message', ''))[:500]
     list_type = request.form.get('list_type', 'M')
     if list_type not in ('M', 'C'):
         list_type = 'M'
-    # Output format selection: 'old' (default), 'new', or 'both'
     output_format = request.form.get('output_format', 'old').lower()
     if output_format not in ('old', 'new', 'both'):
         output_format = 'old'
-    # Remove any non-digit characters from WhatsApp number
     whatsapp_number = ''.join(filter(str.isdigit, whatsapp_number))
 
     try:
@@ -588,20 +611,19 @@ def generate_html():
         if err_old:
             return jsonify({'error': err_old}), 500
         old_filename = f"offer_list_{list_type}{list_no}.htm"
-        processed_results['html_latest'] = {
+        old_token = _store_result({
             'content': html_old, 'filename': old_filename, 'count': len(data_items),
-        }
+        })
         response_payload['old_filename'] = old_filename
+        response_payload['old_token'] = old_token
 
     # ---- NEW format ----
     if output_format in ('new', 'both'):
         if not os.path.exists(template_path_new):
             return jsonify({'error': 'New-format template file not found'}), 500
-        # New format needs the extended fields. Re-parse the same text in extended mode.
         items_extended = parse_text_content_extended(text_content)
         if not items_extended:
             return jsonify({'error': 'No valid items for new format'}), 400
-        # Sanity: warn if NO line in the file had TP — new format is meaningless without it.
         if not any((it.get('tp') or '').strip() for it in items_extended):
             return jsonify({
                 'error': 'New format needs T.P values. Re-export your TXT in '
@@ -613,51 +635,48 @@ def generate_html():
         if err_new:
             return jsonify({'error': err_new}), 500
         new_filename = f"offer_list_{list_type}{list_no}_new.htm"
-        processed_results['html_latest_new'] = {
+        new_token = _store_result({
             'content': html_new, 'filename': new_filename, 'count': len(items_extended),
-        }
+        })
         response_payload['new_filename'] = new_filename
+        response_payload['new_token'] = new_token
 
-    # Backwards-compatible top-level filename: prefer old when present, else new.
     response_payload['filename'] = (
         response_payload.get('old_filename') or response_payload.get('new_filename')
     )
     response_payload['message'] = f'Generated {output_format} format with {len(data_items)} items'
     return jsonify(response_payload)
 
-def _send_html_payload(slot, suffix=""):
-    if slot not in processed_results:
-        return "No file to download", 404
-    data = processed_results[slot]
+def _send_html_payload():
+    data = _get_result(request.args.get('token', ''))
+    if not data:
+        return "No file to download or token expired", 404
     buffer = io.BytesIO()
     buffer.write(data['content'].encode('utf-8'))
     buffer.seek(0)
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=data['filename'],
-        mimetype='text/html'
-    )
+    return send_file(buffer, as_attachment=True, download_name=data['filename'], mimetype='text/html')
 
 @app.route('/download-html')
 def download_html():
-    return _send_html_payload('html_latest')
+    return _send_html_payload()
 
 @app.route('/download-html-new')
 def download_html_new():
-    return _send_html_payload('html_latest_new')
+    return _send_html_payload()
 
 @app.route('/preview-html')
 def preview_html():
-    if 'html_latest' not in processed_results:
-        return "No HTML generated yet. Please generate HTML first.", 404
-    return processed_results['html_latest']['content']
+    data = _get_result(request.args.get('token', ''))
+    if not data:
+        return "No HTML generated yet or token expired.", 404
+    return data['content']
 
 @app.route('/preview-html-new')
 def preview_html_new():
-    if 'html_latest_new' not in processed_results:
-        return "No new-format HTML generated yet. Please generate HTML first.", 404
-    return processed_results['html_latest_new']['content']
+    data = _get_result(request.args.get('token', ''))
+    if not data:
+        return "No new-format HTML generated yet or token expired.", 404
+    return data['content']
 
 # ============ SEARCH MEDICINES FUNCTIONALITY ============
 
@@ -728,13 +747,13 @@ def upload_lists():
             f.write(file_data)
         file_paths.append(filepath)
 
-    session_id = request.form.get('session_id', 'default')
-
-    # Clean up expired sessions on each upload
+    # session_id is generated server-side on first upload; client echoes it back on subsequent calls.
+    client_sid = request.form.get('session_id', '').strip()
     purge_expired_sessions()
-
-    # Initialize or refresh the session with a fresh 5-minute TTL
-    if session_id not in uploaded_files_storage:
+    if client_sid and client_sid in uploaded_files_storage:
+        session_id = client_sid  # resume verified existing session
+    else:
+        session_id = secrets.token_urlsafe(32)  # new session — server-generated
         uploaded_files_storage[session_id] = {'files': [], 'expires_at': 0}
 
     uploaded_files_storage[session_id]['files'].extend(file_paths)
@@ -744,8 +763,7 @@ def upload_lists():
     return jsonify({
         'success': True,
         'message': f'Uploaded {len(file_paths)} files, total files in session: {total_files_for_session}',
-        'file_paths': uploaded_files_storage[session_id]['files'],
-        'session_id': session_id,
+        'session_id': session_id,  # filesystem paths not exposed
         'expires_in': SESSION_TTL
     })
 
@@ -753,10 +771,13 @@ def upload_lists():
 def search_medicines():
     data = request.get_json()
     search_terms = data.get('search_terms', [])
-    session_id = data.get('session_id', 'default')
+    session_id = (data.get('session_id') or '').strip()
 
     if not search_terms:
         return jsonify({'error': 'No search terms provided'}), 400
+
+    if not session_id:
+        return jsonify({'error': 'session_id is required'}), 400
 
     # Get file paths for this session, checking expiry
     session_data = uploaded_files_storage.get(session_id)

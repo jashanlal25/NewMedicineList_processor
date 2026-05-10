@@ -1018,7 +1018,7 @@ Imidol tab (1)" rows="10"></textarea>
         })();
 
         let uploadedFiles = [];
-        let sessionId = Date.now().toString();
+        let sessionId = '';  // assigned by server on first upload
 
         // Add event listener to the file input to enable upload button when files are selected
         document.getElementById('files').addEventListener('change', function(e) {
@@ -1217,17 +1217,16 @@ Imidol tab (1)" rows="10"></textarea>
                 const result = await response.json();
 
                 if (result.success) {
-                    uploadedFiles = result.file_paths;
-                    alert(`Successfully uploaded ${result.file_paths.length} files!`);
+                    sessionId = result.session_id;  // store server-generated session token
+                    alert(`Successfully uploaded files! ${result.message}`);
 
-                    // Show uploaded files list
+                    // Show uploaded files list (filenames from original selection, not server paths)
                     const filesList = document.getElementById('fileItems');
                     filesList.innerHTML = '';
-                    result.file_paths.forEach(filepath => {
-                        const fileName = filepath.split('/').pop();
+                    Array.from(files).forEach(f => {
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item';
-                        fileItem.textContent = fileName;
+                        fileItem.textContent = f.name;
                         filesList.appendChild(fileItem);
                     });
                     document.getElementById('filesList').classList.remove('hidden');

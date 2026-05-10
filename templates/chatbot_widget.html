@@ -441,6 +441,12 @@
     if(m && typeof updateMainPagePreview === 'function') updateMainPagePreview(m[1]);
   }
 
+  function escapeHtmlStr(s){
+    var t = document.createElement('div');
+    t.textContent = s;
+    return t.innerHTML;
+  }
+
   function addMsg(text, cls){
     var box = document.getElementById('cb-messages');
     var d = document.createElement('div');
@@ -679,12 +685,42 @@
         'error'
       ); return;
     }
-    var items = ta ? extractForGrok(ta) : [];
-    // Groq free tier = 6000 TPM. Each item ~5 tokens. Cap at 150 items (~750 tokens) leaving room for prompt+response.
-    var MAX_ITEMS = 150;
-    var truncated = items.length > MAX_ITEMS;
-    if(truncated) items = items.slice(0, MAX_ITEMS);
-    var compact = items.map(function(it){return it.name+'|'+it.disc+'%';}).join('\n');
+    var allItems = ta ? extractForGrok(ta) : [];
+
+    // Smart item selection: extract medicine names mentioned in the command and
+    // send only those matches. Falls back to the full list for bulk/global commands.
+    // llama-3.1-8b-instant supports 131K context — the real constraint is Groq's
+    // 6000 token/minute rate limit, so we conserve tokens per request, not per list.
+    var BULK_CMD = /\b(all|every|each|entire|whole|full|sort|duplic|count|stat|how many|show list|list all)\b/i.test(cmd);
+    var itemsToSend;
+    if(!BULK_CMD && allItems.length > 200) {
+      // Extract quoted phrases or capitalised words from the command as candidate names
+      var nameHints = [];
+      var quoted = cmd.match(/"([^"]+)"|'([^']+)'/g);
+      if(quoted) nameHints = quoted.map(function(q){return q.replace(/['"]/g,'').toLowerCase();});
+      // Also pick capitalised words (likely medicine names)
+      var capWords = cmd.match(/\b[A-Z][a-z]{2,}\b/g);
+      if(capWords) nameHints = nameHints.concat(capWords.map(function(w){return w.toLowerCase();}));
+
+      if(nameHints.length > 0) {
+        // Filter items whose name contains any hint
+        var matched = allItems.filter(function(it){
+          var n = it.name.toLowerCase();
+          return nameHints.some(function(h){return n.indexOf(h) !== -1;});
+        });
+        // Send matched items + up to 100 surrounding context items (alphabetical neighbours)
+        itemsToSend = matched.length > 0 ? matched : allItems.slice(0, 300);
+      } else {
+        // No specific names found — send up to 300 items and note the rest
+        itemsToSend = allItems.slice(0, 300);
+      }
+    } else {
+      itemsToSend = allItems;
+    }
+
+    var sentCount = itemsToSend.length;
+    var totalCount = allItems.length;
+    var compact = itemsToSend.map(function(it){return it.name+'|'+it.disc+'%';}).join('\n');
 
     // Build message content (with optional text attachment — Groq has no vision)
     var textBody = '';
@@ -698,13 +734,16 @@
     // Only send list when command needs it — saves tokens on free tier
     var needsList = /remove|cap|set|sort|rename|disc|below|above|duplic|bonus|show|list|count|stat|how many/i.test(cmd);
     if(compact && needsList){
-      textBody += 'Current list:\n'+compact+'\n\n';
-      if(truncated) textBody += '(Note: list truncated to first '+MAX_ITEMS+' items due to token limits)\n\n';
-    }
-    if(truncated && needsList){
-      addMsg('⚠️ Your list has <b>'+extractForGrok(ta).length+' items</b> — only first <b>'+MAX_ITEMS+'</b> sent to Groq (free tier token limit). Use built-in commands for full list operations.', 'bot');
+      textBody += 'Current list ('+sentCount+' of '+totalCount+' items):\n'+compact+'\n\n';
+      if(sentCount < totalCount){
+        textBody += '(Showing '+sentCount+' relevant items out of '+totalCount+' total. Full list available.)\n\n';
+        addMsg('Sending '+sentCount+' relevant items to Groq ('+totalCount+' total). For whole-list operations say "all items".', 'bot');
+      }
     }
     textBody += 'Command: '+cmd;
+
+    // Scale max_tokens with list size so large responses aren't cut off
+    var responseTokens = Math.min(4000, Math.max(1200, sentCount * 8));
 
     var payload = {
       model: 'llama-3.1-8b-instant',
@@ -712,7 +751,7 @@
         {role:'system', content:'You are a medicine discount-list editor. Items format: name|disc%. For analysis: answer in plain text. For bulk changes: return ONLY the updated list in name|disc% format, one per line.'},
         {role:'user', content: textBody}
       ],
-      max_tokens: 1200, temperature: 0.1
+      max_tokens: responseTokens, temperature: 0.1
     };
 
     var input = document.getElementById('cb-input');
@@ -785,7 +824,7 @@
           }
         }
       }
-      addMsg(reply.replace(/\n/g,'<br>'), 'bot');
+      addMsg(escapeHtmlStr(reply).replace(/\n/g,'<br>'), 'bot');
     })
     .catch(function(err){
       thinkEl.remove();
@@ -810,16 +849,40 @@
     input.disabled = true; sendBtn.disabled = true;
 
     var ta = getActiveTextarea();
-    var items = ta ? extractForGrok(ta) : [];
-    if(items.length > 300) items = items.slice(0, 300); // Puter can handle more tokens
-    var compact = items.map(function(it){ return it.name+'|'+it.disc+'%'; }).join('\n');
+    var allItemsP = ta ? extractForGrok(ta) : [];
+
+    // Same smart filtering as Groq path — Puter/Grok has large context so we send more,
+    // but still avoid dumping the whole list for targeted single-item commands.
+    var BULK_CMD_P = /\b(all|every|each|entire|whole|full|sort|duplic|count|stat|how many|show list|list all)\b/i.test(cmd);
+    var itemsToSendP;
+    if(!BULK_CMD_P && allItemsP.length > 500){
+      var nameHintsP = [];
+      var quotedP = cmd.match(/"([^"]+)"|'([^']+)'/g);
+      if(quotedP) nameHintsP = quotedP.map(function(q){return q.replace(/['"]/g,'').toLowerCase();});
+      var capWordsP = cmd.match(/\b[A-Z][a-z]{2,}\b/g);
+      if(capWordsP) nameHintsP = nameHintsP.concat(capWordsP.map(function(w){return w.toLowerCase();}));
+      if(nameHintsP.length > 0){
+        var matchedP = allItemsP.filter(function(it){
+          var n=it.name.toLowerCase();
+          return nameHintsP.some(function(h){return n.indexOf(h)!==-1;});
+        });
+        itemsToSendP = matchedP.length > 0 ? matchedP : allItemsP.slice(0,500);
+      } else {
+        itemsToSendP = allItemsP.slice(0,500);
+      }
+    } else {
+      itemsToSendP = allItemsP;
+    }
+    var compact = itemsToSendP.map(function(it){ return it.name+'|'+it.disc+'%'; }).join('\n');
 
     var prompt = '';
     if(file && file.type === 'text'){
       prompt += 'Attached file ('+file.name+'):\n'+file.data.substring(0,3000)+'\n\n';
     }
     var needsListP = /remove|cap|set|sort|rename|disc|below|above|duplic|bonus|show|list|count|stat|how many/i.test(cmd);
-    if(compact && needsListP) prompt += 'Current list:\n'+compact+'\n\n';
+    if(compact && needsListP){
+      prompt += 'Current list ('+itemsToSendP.length+' of '+allItemsP.length+' items):\n'+compact+'\n\n';
+    }
     prompt += 'Command: '+cmd;
 
     var thinkEl = addMsg('<div class="cb-dots"><span></span><span></span><span></span></div> Asking Grok via Puter…', 'thinking');
@@ -860,7 +923,7 @@
           }
         }
       }
-      addMsg(reply.replace(/\n/g,'<br>'), 'bot');
+      addMsg(escapeHtmlStr(reply).replace(/\n/g,'<br>'), 'bot');
     })
     .catch(function(err){
       thinkEl.remove();
@@ -907,7 +970,7 @@
       }
       if(!ta){ addMsg('No list found. Upload a file or paste items first.', 'error'); return; }
       var reply = runCommand(cmd, ta);
-      addMsg(reply, 'bot');
+      addMsg(escapeHtmlStr(reply), 'bot');
     }
   }
   window.cbSend = cbSend;

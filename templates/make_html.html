@@ -1444,6 +1444,8 @@
                     resultCard.className = 'result-card';
                     const oldName = data.old_filename || '';
                     const newName = data.new_filename || '';
+                    window._oldToken = data.old_token || '';
+                    window._newToken = data.new_token || '';
                     let fileLine = '';
                     if (oldName && newName) {
                         fileLine = `<small>Files: ${oldName} &amp; ${newName}</small>`;
@@ -1455,7 +1457,10 @@
                     document.getElementById('resultButtonsNew').style.display = newName ? 'flex' : 'none';
                 } else {
                     resultCard.className = 'result-card error';
-                    resultMessage.innerHTML = `<strong>✗ Error:</strong> ${data.error}`;
+                    const errNode = document.createElement('span');
+                    errNode.textContent = data.error;
+                    resultMessage.innerHTML = '<strong>✗ Error:</strong> ';
+                    resultMessage.appendChild(errNode);
                     document.getElementById('resultButtonsOld').style.display = 'none';
                     document.getElementById('resultButtonsNew').style.display = 'none';
                 }
@@ -1463,26 +1468,29 @@
                 loading.style.display = 'none';
                 result.style.display = 'block';
                 resultCard.className = 'result-card error';
-                resultMessage.innerHTML = `<strong>✗ Error:</strong> ${error.message}`;
+                const catchNode = document.createElement('span');
+                catchNode.textContent = error.message;
+                resultMessage.innerHTML = '<strong>✗ Error:</strong> ';
+                resultMessage.appendChild(catchNode);
             }
 
             generateBtn.disabled = false;
         }
 
         function previewHTML() {
-            window.open('/preview-html', '_blank');
+            window.open('/preview-html?token=' + encodeURIComponent(window._oldToken || ''), '_blank');
         }
 
         function downloadHTML() {
-            window.location.href = '/download-html';
+            window.location.href = '/download-html?token=' + encodeURIComponent(window._oldToken || '');
         }
 
         function previewHTMLNew() {
-            window.open('/preview-html-new', '_blank');
+            window.open('/preview-html-new?token=' + encodeURIComponent(window._newToken || ''), '_blank');
         }
 
         function downloadHTMLNew() {
-            window.location.href = '/download-html-new';
+            window.location.href = '/download-html-new?token=' + encodeURIComponent(window._newToken || '');
         }
 
         // Theme Toggle Functionality

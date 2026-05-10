@@ -3,3 +3,7 @@ __pycache__/
 *.pyo
 uploads/
 .env
+output/
+sample/
+*.pdf
+.claude/
