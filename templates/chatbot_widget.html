@@ -680,6 +680,10 @@
       ); return;
     }
     var items = ta ? extractForGrok(ta) : [];
+    // Groq free tier = 6000 TPM. Each item ~5 tokens. Cap at 150 items (~750 tokens) leaving room for prompt+response.
+    var MAX_ITEMS = 150;
+    var truncated = items.length > MAX_ITEMS;
+    if(truncated) items = items.slice(0, MAX_ITEMS);
     var compact = items.map(function(it){return it.name+'|'+it.disc+'%';}).join('\n');
 
     // Build message content (with optional text attachment — Groq has no vision)
@@ -693,7 +697,13 @@
     }
     // Only send list when command needs it — saves tokens on free tier
     var needsList = /remove|cap|set|sort|rename|disc|below|above|duplic|bonus|show|list|count|stat|how many/i.test(cmd);
-    if(compact && needsList) textBody += 'Current list:\n'+compact+'\n\n';
+    if(compact && needsList){
+      textBody += 'Current list:\n'+compact+'\n\n';
+      if(truncated) textBody += '(Note: list truncated to first '+MAX_ITEMS+' items due to token limits)\n\n';
+    }
+    if(truncated && needsList){
+      addMsg('⚠️ Your list has <b>'+extractForGrok(ta).length+' items</b> — only first <b>'+MAX_ITEMS+'</b> sent to Groq (free tier token limit). Use built-in commands for full list operations.', 'bot');
+    }
     textBody += 'Command: '+cmd;
 
     var payload = {
@@ -801,6 +811,7 @@
 
     var ta = getActiveTextarea();
     var items = ta ? extractForGrok(ta) : [];
+    if(items.length > 300) items = items.slice(0, 300); // Puter can handle more tokens
     var compact = items.map(function(it){ return it.name+'|'+it.disc+'%'; }).join('\n');
 
     var prompt = '';
