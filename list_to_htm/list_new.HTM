@@ -734,6 +734,9 @@ function fmt2(n){
   n = Number(n || 0);
   return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
 }
+function toTitleCase(s){
+  return String(s||'').replace(/\w\S*/g, function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); });
+}
 
 /* optional: for preview html */
 function escapeHtml(s){
@@ -824,7 +827,7 @@ function buildWaMessage(payload){
     msg += "*QTY*  : " + it.qty + "\n";
     msg += "*Disc* : " + it.disc + "%" + (it.discSuffix || "") + "\n";
     msg += "*Bonus*: " + it.bonus + "\n";
-    msg += "*ITM*  : " + it.name + "\n";
+    msg += "*ITM*  : " + toTitleCase(it.name) + "\n";
     msg += "--------------------\n";
   }
   msg += "*Items* : " + payload.totalItems + "\n";
@@ -967,7 +970,7 @@ if (btnPrepare){
       var it = payload.items[i];
       rows += '<tr>' +
         '<td>' + esc(it.code) + '</td>' +
-        '<td class="nm">' + esc(it.name) + '</td>' +
+        '<td class="nm">' + esc(toTitleCase(it.name)) + '</td>' +
         '<td class="r">' + (parseInt(it.qty,10)||0) + '</td>' +
         '<td class="r">' + fN(it.tp) + '</td>' +
         '<td class="r">' + fD(it.disc, it.discSuffix) + '</td>' +
@@ -1074,7 +1077,7 @@ if (btnPrepare){
       rowsHtml += "<tr>";
       rowsHtml += "<td>" + (i+1) + "</td>";
       rowsHtml += "<td>" + escapeHtml(it.code) + "</td>";
-      rowsHtml += "<td style='font-weight:400;white-space:normal;'>" + escapeHtml(it.name) + "</td>";
+      rowsHtml += "<td style='font-weight:400;white-space:normal;'>" + escapeHtml(toTitleCase(it.name)) + "</td>";
       if (showQty)   rowsHtml += "<td style='text-align:right'>" + int0(it.qty) + "</td>";
       if (showDisc)  rowsHtml += "<td style='text-align:right'>" + fmt2(it.disc) + "%" + (it.discSuffix||"") + "</td>";
       if (showBonus) rowsHtml += "<td style='text-align:right'>" + escapeHtml(it.bonus) + "</td>";

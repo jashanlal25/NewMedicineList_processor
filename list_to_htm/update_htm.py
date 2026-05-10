@@ -34,28 +34,10 @@ def parse_discount_value(value):
         main_value = value[:slash_pos].strip()
         bonus_part = value[slash_pos+1:].strip()
 
-    # Check if it's a "NET" value (which typically comes with numbers like "140 NET")
+    # Check if it's a "NET" value (e.g. "360 Net" means net rate, not discount%)
     if 'net' in main_value.lower():
-        # For values like "140 NET", treat the number as discount and "NET" as additional info
-        # Split by space and try to find the numeric part
-        parts = main_value.split()
-        for part in parts:
-            if any(c.isdigit() for c in part):
-                try:
-                    # Extract the numeric part
-                    num_str = ''.join(c for c in part if c.isdigit() or c == '.')
-                    discount = float(num_str) if num_str else 0.0
-                    # Return the whole value as additional info since it's a net price
-                    return discount, main_value.strip() if not bonus_part else bonus_part
-                except:
-                    pass
-        # If we can't parse it as a number, treat it as a special case
-        net_match = re.search(r'net(.*)', main_value, re.IGNORECASE)
-        if net_match:
-            additional_part = net_match.group(1).strip()
-            return 0.0, f"net{additional_part}" if not bonus_part else bonus_part
-        else:
-            return 0.0, main_value if not bonus_part else bonus_part
+        # The number is the NET RATE (TP), not a discount percentage → disc = 0%
+        return 0.0, main_value.strip() if not bonus_part else bonus_part
 
     elif '%' in main_value:
         # Extract numeric part from percentage
@@ -475,9 +457,12 @@ def _parse_disc_to_num(value):
     if not value:
         return 0.0
     cleaned = value.strip()
+    # NET and TP values are rates, not discount percentages → 0%
+    if 'net' in cleaned.lower() or cleaned.upper().startswith('TP'):
+        return 0.0
     if '%' in cleaned:
         cleaned = cleaned.split('%')[0].strip()
-    # Drop everything after first non-numeric (allows '0' from 'TP', 'NET', etc.)
+    # Drop everything after first non-numeric
     out = ""
     for ch in cleaned:
         if ch.isdigit() or ch == '.':
