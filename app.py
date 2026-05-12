@@ -555,6 +555,14 @@ def make_html_page():
 
 @app.route('/generate-html', methods=['POST'])
 def generate_html():
+    try:
+        return _generate_html_inner()
+    except Exception as exc:
+        import traceback
+        return jsonify({'error': f'Server error: {type(exc).__name__}: {exc}',
+                        'detail': traceback.format_exc()}), 500
+
+def _generate_html_inner():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
