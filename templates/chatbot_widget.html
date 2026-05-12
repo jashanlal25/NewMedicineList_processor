@@ -229,6 +229,19 @@
     <span class="cb-hint" onclick="cbQuick('undo')">undo</span>
     <span class="cb-hint cb-hint-key" onclick="cbChangeKey()" title="Change or update your Groq API key">🔑 change key</span>
   </div>
+  <script>
+  // Replace hints with search-specific ones on the search page
+  (function(){
+    if(typeof window.cbSearchPage === 'undefined') return;
+    var hints = document.getElementById('cb-hints');
+    hints.innerHTML =
+      '<span class="cb-hint" onclick="cbQuick(\'Azomax, Caflam\')">search example</span>' +
+      '<span class="cb-hint" onclick="cbQuick(\'search for \')">search for…</span>' +
+      '<span class="cb-hint cb-hint-key" onclick="cbChangeKey()" title="Groq API key">🔑 key</span>';
+    // Show welcome message
+    addMsg('👋 Upload your list files above, then type any medicine name(s) here to search — separate multiple names with commas.', 'bot');
+  })();
+  </script>
 
   <div id="cb-attach-info"></div>
 
@@ -935,6 +948,43 @@
   }
 
   /* ── Main send ── */
+  /* ── Search page: detect & handle search queries directly ── */
+  function cbTrySearchPage(cmd){
+    if(typeof window.cbSearchPage === 'undefined') return false;
+    var sp = window.cbSearchPage;
+
+    // Detect search intent: starts with "search", "find", "look for" OR is a comma-separated list
+    var lower = cmd.toLowerCase().trim();
+    var isSearchCmd = /^(search|find|look for|show|get)\b/i.test(lower);
+    var isCommaList = !isSearchCmd && cmd.indexOf(',') !== -1 && cmd.length < 300;
+    var isSingleName = !isSearchCmd && !isCommaList && /^[a-zA-Z0-9 \.\-\/]+$/.test(cmd) && cmd.length < 80;
+
+    if(!isSearchCmd && !isCommaList && !isSingleName) return false;
+    if(!sp.hasFiles()){
+      addMsg('No files uploaded yet. Upload your HTM/TXT list files first, then ask me to search.', 'error');
+      return true;
+    }
+
+    // Extract search terms
+    var rawTerms = cmd;
+    if(isSearchCmd) rawTerms = cmd.replace(/^(search|find|look for|show|get)\s+(for\s+)?/i, '');
+    var terms = rawTerms.split(',').map(function(t){ return t.trim(); }).filter(function(t){ return t.length > 1; });
+    if(terms.length === 0) return false;
+
+    var thinkEl = addMsg('<span class="cb-dots"><span></span><span></span><span></span></span> Searching ' + terms.length + ' item' + (terms.length>1?'s':'') + '…', 'thinking');
+    sp.runSearch(terms).then(function(data){
+      thinkEl.remove();
+      if(!data || data.error){
+        addMsg('Search failed: ' + (data && data.error ? data.error : 'unknown error'), 'error');
+        return;
+      }
+      var html = sp.renderResultsHtml(data.results);
+      var msgEl = addMsg(html, 'bot');
+      if(msgEl) msgEl.style.maxWidth = '100%';
+    });
+    return true;
+  }
+
   function cbSend(){
     var input = document.getElementById('cb-input');
     var cmd = input.value.trim();
@@ -954,6 +1004,9 @@
 
     pendingFile = null;
     document.getElementById('cb-attach-info').style.display = 'none';
+
+    // On search page: intercept search queries before AI
+    if(!file && cbTrySearchPage(cmd)) return;
 
     var groqOn  = document.getElementById('cb-grok-toggle').checked;
     var puterOn = document.getElementById('cb-puter-toggle').checked;

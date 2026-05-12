@@ -1376,6 +1376,49 @@ Imidol tab (1)" rows="10"></textarea>
 
             resultsSection.classList.remove('hidden');
         }
+
+        // ── Expose search context for chatbot ──
+        // The chatbot widget reads window.cbSearchPage to detect it's on the search page
+        window.cbSearchPage = {
+            getSessionId: function(){ return sessionId; },
+            hasFiles: function(){ return !!sessionId; },
+            runSearch: async function(terms){
+                if(!sessionId) return null;
+                try {
+                    const resp = await fetch('/search-medicines', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ search_terms: terms, session_id: sessionId })
+                    });
+                    return await resp.json();
+                } catch(e){ return null; }
+            },
+            // Build the same styled card HTML used by displayResults, for use inside chat
+            renderResultsHtml: function(results){
+                let html = '';
+                let total = 0;
+                results.forEach(function(r){
+                    if(!r.matches || r.matches.length === 0) return;
+                    total += r.matches.length;
+                    html += '<div style="margin-bottom:10px">';
+                    html += '<div style="font-weight:600;font-size:12px;color:#1d4ed8;margin-bottom:6px;padding:4px 8px;background:#eff6ff;border-radius:6px">🔍 ' + r.search_term + '</div>';
+                    r.matches.forEach(function(med){
+                        html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:5px;box-shadow:0 1px 3px rgba(0,0,0,.06)">';
+                        html += '<div style="font-weight:600;font-size:12px;color:#1e293b;margin-bottom:4px">' + med.name + '</div>';
+                        html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+                        html += '<span style="background:#f0f8ff;color:#2c5aa0;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">' + (med.shop || 'Unknown') + '</span>';
+                        html += '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">' + (med.discount || 'N/A') + '</span>';
+                        html += '</div></div>';
+                    });
+                    html += '</div>';
+                });
+                if(total === 0) html = '<span style="color:#64748b">No matches found.</span>';
+                else html = '<div style="font-size:11px;color:#64748b;margin-bottom:8px">Found <b>' + total + '</b> match' + (total>1?'es':'') + '</div>' + html;
+                return html;
+            }
+        };
     </script>
+
+    {% include 'chatbot_widget.html' %}
 </body>
 </html>

@@ -109,9 +109,32 @@ class MedicineSearcher:
             html_content = file.read()
 
         soup = BeautifulSoup(html_content, "html.parser")
-        items = soup.find_all("tr", class_="item")
 
         medicines = []
+
+        # New format: <tr class="item-row"> with data attributes
+        new_items = soup.find_all("tr", class_="item-row")
+        if new_items:
+            for item in new_items:
+                name = item.get('data-name', '').strip()
+                if not name:
+                    continue
+                disc_raw = item.get('data-disc', '').strip()
+                bonus = item.get('data-bonus', '').strip()
+                try:
+                    disc_num = float(disc_raw) if disc_raw else 0.0
+                except ValueError:
+                    disc_num = 0.0
+                discount = f"{disc_num:.2f}%" if disc_num > 0 else (bonus or "0.00%")
+                medicines.append({
+                    'name': name.title(),
+                    'discount': discount,
+                    'raw_data': str(item)
+                })
+            return medicines
+
+        # Old format: <tr class="item">
+        items = soup.find_all("tr", class_="item")
         for item in items:
             columns = item.find_all("td")
             if len(columns) >= 3:  # Need at least name column
