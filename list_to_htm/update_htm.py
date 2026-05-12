@@ -504,8 +504,16 @@ def _new_format_item_row(serial, code, name, disc_num, bonus, tp, tax, list_no="
     # Extract trailing suffix after % (e.g. "," or ".") to preserve in WhatsApp/PDF
     _suffix_m = re.search(r'%(.+)$', disc_raw.strip()) if disc_raw else None
     disc_suffix = _suffix_m.group(1).strip() if _suffix_m else ""
-    tp_str = f"{float(tp):.2f}" if tp else "0.00"
-    tax_str = f"{float(tax):.2f}" if tax else "0.00"
+    def _safe_num(val):
+        if not val:
+            return "0.00"
+        cleaned = ''.join(ch for ch in str(val) if ch.isdigit() or ch == '.')
+        try:
+            return f"{float(cleaned):.2f}" if cleaned else "0.00"
+        except ValueError:
+            return "0.00"
+    tp_str = _safe_num(tp)
+    tax_str = _safe_num(tax)
     bonus_attr = (bonus or "").strip()
     name_disp = name.strip()
 
