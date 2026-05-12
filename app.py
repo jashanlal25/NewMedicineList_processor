@@ -325,10 +325,14 @@ def parse_text_content(text_content):
             continue
         if '→' in line:
             line = line.split('→', 1)[1]
-        # If the line is in extended format, the name/value pair lives in the 2nd column.
+        # If the line is in extended format, strip to just the name----- value part.
         if '|' in line:
             parts_pipe = line.split('|')
-            if len(parts_pipe) >= 2 and '-----' in parts_pipe[1]:
+            if len(parts_pipe) >= 2 and '-----' in parts_pipe[0]:
+                # "name----- value | tp | bonus | tax" — keep only name-value part
+                line = parts_pipe[0]
+            elif len(parts_pipe) >= 2 and '-----' in parts_pipe[1]:
+                # legacy: "code | name----- value | ..."
                 line = parts_pipe[1]
         if '-----' in line:
             parts = line.split('-----')
