@@ -117,6 +117,10 @@ class MedicineSearcher:
         if new_items:
             for item in new_items:
                 name = item.get('data-name', '').strip()
+                # Fall back to td.cell-name if data-name attribute is missing
+                if not name:
+                    name_td = item.find('td', class_='cell-name')
+                    name = name_td.get_text(strip=True) if name_td else ''
                 if not name:
                     continue
                 disc_raw = item.get('data-disc', '').strip()
@@ -361,70 +365,65 @@ class MedicineSearcher:
             except Exception as e:
                 print(f"Error processing file {file_path}: {str(e)}")
 
+        # Common form prefixes that appear in orders but not in medicine names
+        _FORM_PREFIXES = {'tab', 'cap', 'syp', 'inj', 'susp', 'oint', 'drop', 'drops',
+                          'cream', 'gel', 'sachet', 'sachets', 'lotion', 'spray'}
+
+        def _normalize(s):
+            """Lowercase, remove spaces — used for no-space matching like 'Calamox625'."""
+            return re.sub(r'\s+', '', s.lower())
+
+        def _clean_term(t):
+            """Strip leading/trailing form prefixes from a search term."""
+            words = t.lower().split()
+            # strip leading prefix (e.g. "Tab jardin D" → "jardin D")
+            while words and words[0] in _FORM_PREFIXES:
+                words = words[1:]
+            # strip trailing prefix (e.g. "Arinac Syp" → "Arinac")
+            while words and words[-1] in _FORM_PREFIXES:
+                words = words[:-1]
+            return ' '.join(words)
+
         # Search for the requested medicines with improved algorithm
         results = []
         for term in search_terms:
             term_lower = term.lower().strip()
             found_medicines = []
 
-            # Split the search term into individual words
-            search_words = [word.strip() for word in term_lower.split() if word.strip()]
+            cleaned = _clean_term(term_lower)           # strip form prefixes
+            norm_term = _normalize(cleaned)              # no-space version
+            search_words = [w for w in cleaned.split() if w]
 
             for med in all_medicines:
                 med_name_lower = med['name'].lower()
-
-                # Split medicine name into words
-                med_words = [word.strip() for word in med_name_lower.split() if word.strip()]
+                norm_med = _normalize(med_name_lower)
+                med_words = med_name_lower.split()
 
                 # 1. Exact match
-                if term_lower == med_name_lower:
+                if term_lower == med_name_lower or cleaned == med_name_lower:
                     found_medicines.append(med)
                     continue
 
-                # 2. If searching for a specific medicine name with strength (like "azomax 500")
-                # only match if the medicine name contains all the words from the search term
-                # but be careful not to match "500" alone with unrelated medicines
-                if len(search_words) == 1:
-                    # Single word search (like "500") - need to be careful
-                    search_word = search_words[0]
-                    if len(search_word) < 3:
-                        # If it's a very short word (likely a strength like "500"), it should be part of a specific medicine
-                        # Match only if it's part of a larger name where we expect that strength
-                        for med_word in med_words:
-                            if search_word == med_word or (search_word in med_word and any(char.isalpha() for char in med_word)):
-                                found_medicines.append(med)
-                                break
-                    else:
-                        # If it's a longer word, it might be a medicine name part - allow partial matching
-                        if search_word in med_name_lower:
-                            found_medicines.append(med)
-                else:
-                    # Multiple word search (like "azomax 500")
-                    # All words should appear in the medicine name
-                    all_search_words_found = True
-                    for search_word in search_words:
-                        word_found = False
+                # 2. No-space match: "Calamox625" matches "calamox 625 tab"
+                if len(norm_term) >= 4 and norm_term in norm_med:
+                    found_medicines.append(med)
+                    continue
 
-                        # For each word in the search term, check if it appears in the medicine name
-                        if len(search_word) < 3:
-                            # Short word like "500" - should match as part of medicine name or be adjacent to letters
-                            for med_word in med_words:
-                                if search_word in med_word and any(c.isalpha() for c in med_word):
-                                    word_found = True
-                                    break
-                        else:
-                            # Longer words should match as complete words or as parts of medicine names
-                            for med_word in med_words:
-                                if search_word in med_word.lower():
-                                    word_found = True
-                                    break
+                # 3. All cleaned words appear in medicine name
+                if search_words and all(
+                    any(sw in mw for mw in med_words) or sw in med_name_lower
+                    for sw in search_words if len(sw) >= 3
+                ):
+                    found_medicines.append(med)
+                    continue
 
-                        if not word_found:
-                            all_search_words_found = False
-                            break
-
-                    if all_search_words_found:
-                        found_medicines.append(med)
+                # 4. Alpha-core match: strip digits, match base drug name
+                # e.g. "Candreal 100tab" → "candreal" found in "candreal200tab"
+                alpha_parts = [p for p in re.findall(r'[a-z]{5,}', norm_term)
+                               if p not in _FORM_PREFIXES]
+                if alpha_parts and all(p in norm_med for p in alpha_parts):
+                    found_medicines.append(med)
+                    continue
 
             # Add this search term and its results
             results.append({

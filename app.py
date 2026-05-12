@@ -720,7 +720,7 @@ import tempfile
 import gzip as gzip_module
 import time
 
-SESSION_TTL = 300  # 5 minutes in seconds
+SESSION_TTL = 4 * 3600  # 4 hours in seconds
 
 # Global instance to store uploaded files: {session_id: {'files': [...], 'expires_at': timestamp}}
 uploaded_files_storage = {}
@@ -750,52 +750,110 @@ def cleanup_uploads():
 # Register cleanup function to run on exit
 atexit.register(cleanup_uploads)
 
+def _session_dir(session_id):
+    """Return the on-disk folder for a session."""
+    base = os.path.join(tempfile.gettempdir(), 'medicine_uploads')
+    # Sanitise session_id so it is safe as a directory name
+    safe_sid = re.sub(r'[^A-Za-z0-9_\-]', '', session_id)[:64]
+    return os.path.join(base, safe_sid)
+
+def _reconstruct_session(session_id):
+    """Re-populate uploaded_files_storage from disk if folder exists and is fresh."""
+    folder = _session_dir(session_id)
+    if not os.path.isdir(folder):
+        return False
+    # Use folder mtime as a proxy for last-upload time
+    age = time.time() - os.path.getmtime(folder)
+    if age > SESSION_TTL:
+        shutil.rmtree(folder, ignore_errors=True)
+        return False
+    files = [os.path.join(folder, f) for f in os.listdir(folder)
+             if os.path.isfile(os.path.join(folder, f))]
+    if not files:
+        return False
+    uploaded_files_storage[session_id] = {
+        'files': files,
+        'expires_at': time.time() + (SESSION_TTL - age)
+    }
+    return True
+
 @app.route('/upload-lists', methods=['POST'])
 def upload_lists():
     if 'files' not in request.files:
         return jsonify({'error': 'No files uploaded'}), 400
 
     files = request.files.getlist('files')
-    file_paths = []
 
+    # session_id: reuse existing or create new
+    client_sid = request.form.get('session_id', '').strip()
+    purge_expired_sessions()
+    if client_sid and (client_sid in uploaded_files_storage or _reconstruct_session(client_sid)):
+        session_id = client_sid
+    else:
+        session_id = secrets.token_urlsafe(32)
+        uploaded_files_storage[session_id] = {'files': [], 'expires_at': 0}
+
+    folder = _session_dir(session_id)
+    os.makedirs(folder, exist_ok=True)
+
+    file_paths = []
     for file in files:
         if file.filename == '':
             continue
-
-        # Check file extension
         if not file.filename.lower().endswith(('.htm', '.html', '.txt', '.text', '.pdf')):
             continue
-
-        # Save the file temporarily to writable temp directory (/tmp on Vercel)
         filename = secure_filename(file.filename) or 'upload'
-        upload_dir = os.path.join(tempfile.gettempdir(), 'medicine_uploads')
-        os.makedirs(upload_dir, exist_ok=True)
-        filepath = os.path.join(upload_dir, filename)
-
+        filepath = os.path.join(folder, filename)
         file_data = decompress_if_needed(file.read())
         with open(filepath, 'wb') as f:
             f.write(file_data)
         file_paths.append(filepath)
 
-    # session_id is generated server-side on first upload; client echoes it back on subsequent calls.
-    client_sid = request.form.get('session_id', '').strip()
-    purge_expired_sessions()
-    if client_sid and client_sid in uploaded_files_storage:
-        session_id = client_sid  # resume verified existing session
-    else:
-        session_id = secrets.token_urlsafe(32)  # new session — server-generated
-        uploaded_files_storage[session_id] = {'files': [], 'expires_at': 0}
+    # Touch folder mtime so age tracking stays current
+    os.utime(folder, None)
 
-    uploaded_files_storage[session_id]['files'].extend(file_paths)
+    uploaded_files_storage[session_id]['files'] = [
+        os.path.join(folder, f) for f in os.listdir(folder)
+        if os.path.isfile(os.path.join(folder, f))
+    ]
     uploaded_files_storage[session_id]['expires_at'] = time.time() + SESSION_TTL
 
     total_files_for_session = len(uploaded_files_storage[session_id]['files'])
     return jsonify({
         'success': True,
         'message': f'Uploaded {len(file_paths)} files, total files in session: {total_files_for_session}',
-        'session_id': session_id,  # filesystem paths not exposed
+        'session_id': session_id,
         'expires_in': SESSION_TTL
     })
+
+@app.route('/remove-file', methods=['POST'])
+def remove_file():
+    data = request.get_json()
+    session_id = (data.get('session_id') or '').strip()
+    filename = (data.get('filename') or '').strip()
+
+    if not session_id or not filename:
+        return jsonify({'error': 'session_id and filename required'}), 400
+
+    session_data = uploaded_files_storage.get(session_id)
+    if not session_data:
+        _reconstruct_session(session_id)
+        session_data = uploaded_files_storage.get(session_id)
+    if not session_data:
+        return jsonify({'error': 'Session not found'}), 404
+
+    files = session_data['files']
+    match = next((p for p in files if os.path.basename(p) == filename), None)
+    if not match:
+        return jsonify({'error': 'File not found in session'}), 404
+
+    files.remove(match)
+    try:
+        os.unlink(match)
+    except OSError:
+        pass
+
+    return jsonify({'success': True, 'remaining': len(files)})
 
 @app.route('/search-medicines', methods=['POST'])
 def search_medicines():
@@ -810,12 +868,16 @@ def search_medicines():
         return jsonify({'error': 'session_id is required'}), 400
 
     # Get file paths for this session, checking expiry
+    # Try to reconstruct from disk if server was restarted
     session_data = uploaded_files_storage.get(session_id)
     if not session_data:
-        return jsonify({'error': 'Session expired or no files uploaded. Please upload your files again.', 'expired': True}), 400
+        if not _reconstruct_session(session_id):
+            return jsonify({'error': 'Session expired or no files uploaded. Please upload your files again.', 'expired': True}), 400
+        session_data = uploaded_files_storage[session_id]
     if time.time() > session_data['expires_at']:
         del uploaded_files_storage[session_id]
-        return jsonify({'error': 'Session expired (5 min limit). Please upload your files again.', 'expired': True}), 400
+        shutil.rmtree(_session_dir(session_id), ignore_errors=True)
+        return jsonify({'error': 'Session expired. Please upload your files again.', 'expired': True}), 400
     file_paths = session_data['files']
     if not file_paths:
         return jsonify({'error': 'No files uploaded for this session'}), 400

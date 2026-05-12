@@ -953,8 +953,38 @@
     if(typeof window.cbSearchPage === 'undefined') return false;
     var sp = window.cbSearchPage;
 
-    // Detect search intent: starts with "search", "find", "look for" OR is a comma-separated list
     var lower = cmd.toLowerCase().trim();
+
+    // Detect capability / file-access questions — answer directly instead of sending to AI
+    if (/\b(access|have.*file|my.*file|can you search|search.*file|from these|search.*these|do you have|have you|can you|do u have)\b/.test(lower) &&
+        lower.length < 120 && lower.split('\n').length <= 2) {
+      if (!sp.hasFiles()) {
+        addMsg('No files uploaded yet. Upload your HTM/TXT list files using the <b>Choose Files</b> button above, then type any medicine name here to search.', 'bot');
+      } else {
+        addMsg('Yes! I have access to your uploaded list files. Just type any medicine name(s) here — e.g. <code>Azomax, Caflam</code> — and I\'ll search across all your files instantly.', 'bot');
+      }
+      return true;
+    }
+
+    // Detect WhatsApp order format: contains "*ITM*  :" lines
+    var itmMatches = cmd.match(/^\*ITM\*\s*:\s*(.+)$/gmi);
+    if(itmMatches && itmMatches.length > 0){
+      if(!sp.hasFiles()){
+        addMsg('No files uploaded yet. Upload your HTM/TXT list files first.', 'error');
+        return true;
+      }
+      var terms = itmMatches.map(function(l){ return l.replace(/^\*ITM\*\s*:\s*/i,'').trim(); }).filter(function(t){ return t.length > 1; });
+      if(terms.length === 0) return false;
+      var thinkEl = addMsg('<span class="cb-dots"><span></span><span></span><span></span></span> Searching ' + terms.length + ' item' + (terms.length>1?'s':'') + '…', 'thinking');
+      sp.runSearch(terms).then(function(data){
+        thinkEl.remove();
+        if(!data || data.error){ addMsg('Search failed: ' + (data && data.error ? data.error : 'unknown error'), 'error'); return; }
+        addMsg(sp.showResults(data), 'bot');
+      });
+      return true;
+    }
+
+    // Detect search intent: starts with "search", "find", "look for" OR comma-separated list OR single name
     var isSearchCmd = /^(search|find|look for|show|get)\b/i.test(lower);
     var isCommaList = !isSearchCmd && cmd.indexOf(',') !== -1 && cmd.length < 300;
     var isSingleName = !isSearchCmd && !isCommaList && /^[a-zA-Z0-9 \.\-\/]+$/.test(cmd) && cmd.length < 80;
@@ -978,9 +1008,8 @@
         addMsg('Search failed: ' + (data && data.error ? data.error : 'unknown error'), 'error');
         return;
       }
-      var html = sp.renderResultsHtml(data.results);
-      var msgEl = addMsg(html, 'bot');
-      if(msgEl) msgEl.style.maxWidth = '100%';
+      var summary = sp.showResults(data);
+      addMsg(summary, 'bot');
     });
     return true;
   }

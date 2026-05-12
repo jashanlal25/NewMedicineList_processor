@@ -623,10 +623,38 @@
         .file-item {
             padding: 5px 0;
             border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
 
         .file-item:last-child {
             border-bottom: none;
+        }
+
+        .file-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-remove-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+            line-height: 1;
+            flex-shrink: 0;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+
+        .file-remove-btn:hover {
+            background: #fee2e2;
         }
 
         /* Side Panel Styles */
@@ -842,8 +870,11 @@
 
             <div class="form-group">
                 <label>Select files to upload:</label>
-                <div class="file-input-wrapper" onclick="document.getElementById('files').click();">
-                    Choose Files
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <div class="file-input-wrapper" onclick="document.getElementById('files').click();" style="width:auto;padding:8px 16px;font-size:13px">
+                        Choose Files
+                    </div>
+                    <button onclick="clearAllFiles()" class="btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);white-space:nowrap;padding:8px 16px;font-size:13px">✕ Clear All</button>
                 </div>
                 <input type="file" id="files" name="files" multiple accept=".htm,.html,.txt,.text,.pdf" style="display: none;">
             </div>
@@ -1018,7 +1049,34 @@ Imidol tab (1)" rows="10"></textarea>
         })();
 
         let uploadedFiles = [];
-        let sessionId = '';  // assigned by server on first upload
+        const SESSION_MAX_AGE = 4 * 60 * 60 * 1000; // 4 hours in ms
+
+        // Clear localStorage if session is older than 4 hours
+        (function checkExpiry(){
+            const ts = parseInt(localStorage.getItem('search_session_ts') || '0', 10);
+            if(ts && Date.now() - ts > SESSION_MAX_AGE){
+                localStorage.removeItem('search_session_id');
+                localStorage.removeItem('search_session_files');
+                localStorage.removeItem('search_session_ts');
+            }
+        })();
+
+        // Restore session from localStorage so files survive page refresh
+        let sessionId = localStorage.getItem('search_session_id') || '';
+        (function restoreFileList(){
+            const saved = localStorage.getItem('search_session_files');
+            if(!saved || !sessionId) return;
+            try {
+                const names = JSON.parse(saved);
+                if(!names.length) return;
+                const filesList = document.getElementById('fileItems');
+                names.forEach(function(name){
+                    filesList.appendChild(_makeFileItem(name));
+                });
+                document.getElementById('filesList').classList.remove('hidden');
+                document.getElementById('searchBtn').disabled = false;
+            } catch(e){}
+        })();
 
         // Add event listener to the file input to enable upload button when files are selected
         document.getElementById('files').addEventListener('change', function(e) {
@@ -1118,15 +1176,25 @@ Imidol tab (1)" rows="10"></textarea>
                 return;
             }
 
-            // Split by lines and clean up each line
-            const lines = bulkInput.split('\n')
-                .map(line => line.trim())
-                .filter(line => line && !line.startsWith('#') && !line.startsWith('//'));
+            const lines = bulkInput.split('\n').map(line => line.trim());
 
-            // Extract medicine names (remove quantities in parentheses like (3), [3], etc.)
-            const searchTerms = lines.map(line => {
-                return line.replace(/\s*\([^\)]+\)|\s*\[[^\]]+\]$/, '').trim();
-            }).filter(term => term);
+            // Detect WhatsApp order format: lines like "*ITM*  : Apranax 550"
+            const itmLines = lines.filter(l => /^\*ITM\*\s*:/i.test(l));
+            let searchTerms;
+            if (itmLines.length > 0) {
+                // Extract name after "*ITM*  :"
+                searchTerms = itmLines.map(l => l.replace(/^\*ITM\*\s*:\s*/i, '').trim()).filter(t => t);
+            } else {
+                // Normal line-by-line format
+                searchTerms = lines
+                    .filter(line => line && !line.startsWith('#') && !line.startsWith('//'))
+                    .map(line => line
+                        .replace(/\.+\s*\d+\s*$/, '')       // strip trailing dots+qty: "Calamox625.......3" → "Calamox625"
+                        .replace(/\s*\([^\)]+\)|\s*\[[^\]]+\]$/, '') // strip (qty) / [qty]
+                        .trim()
+                    )
+                    .filter(term => term.length > 1);
+            }
 
             if (searchTerms.length === 0) {
                 alert('No valid medicine names found in the input');
@@ -1180,6 +1248,52 @@ Imidol tab (1)" rows="10"></textarea>
             } catch (e) { return file; }
         }
 
+        // Build a file-item row with × remove button
+        function _makeFileItem(name) {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'file-item-name';
+            nameEl.textContent = name;
+            const btn = document.createElement('button');
+            btn.className = 'file-remove-btn';
+            btn.title = 'Remove file';
+            btn.textContent = '×';
+            btn.onclick = function(){ removeFile(name, item); };
+            item.appendChild(nameEl);
+            item.appendChild(btn);
+            return item;
+        }
+
+        async function removeFile(filename, itemEl) {
+            if(!sessionId) { itemEl.remove(); return; }
+            try {
+                await fetch('/remove-file', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ session_id: sessionId, filename: filename })
+                });
+            } catch(e){}
+            itemEl.remove();
+            // Update localStorage
+            const remaining = Array.from(document.querySelectorAll('.file-item-name')).map(el => el.textContent);
+            localStorage.setItem('search_session_files', JSON.stringify(remaining));
+            if(remaining.length === 0){
+                document.getElementById('filesList').classList.add('hidden');
+                document.getElementById('searchBtn').disabled = true;
+            }
+        }
+
+        async function clearAllFiles() {
+            document.getElementById('fileItems').innerHTML = '';
+            document.getElementById('filesList').classList.add('hidden');
+            document.getElementById('searchBtn').disabled = true;
+            sessionId = '';
+            localStorage.removeItem('search_session_id');
+            localStorage.removeItem('search_session_files');
+            localStorage.removeItem('search_session_ts');
+        }
+
         async function uploadFiles() {
             const fileInput = document.getElementById('files');
             const files = fileInput.files;
@@ -1217,19 +1331,21 @@ Imidol tab (1)" rows="10"></textarea>
                 const result = await response.json();
 
                 if (result.success) {
-                    sessionId = result.session_id;  // store server-generated session token
+                    sessionId = result.session_id;
+                    localStorage.setItem('search_session_id', sessionId);
+                    localStorage.setItem('search_session_ts', Date.now().toString());
                     alert(`Successfully uploaded files! ${result.message}`);
 
-                    // Show uploaded files list (filenames from original selection, not server paths)
+                    // Append new files to the displayed list (don't clear old ones)
                     const filesList = document.getElementById('fileItems');
-                    filesList.innerHTML = '';
                     Array.from(files).forEach(f => {
-                        const fileItem = document.createElement('div');
-                        fileItem.className = 'file-item';
-                        fileItem.textContent = f.name;
-                        filesList.appendChild(fileItem);
+                        filesList.appendChild(_makeFileItem(f.name));
                     });
                     document.getElementById('filesList').classList.remove('hidden');
+
+                    // Persist file names for refresh recovery
+                    const allNames = Array.from(filesList.querySelectorAll('.file-item-name')).map(el => el.textContent);
+                    localStorage.setItem('search_session_files', JSON.stringify(allNames));
 
                     // Clear the selected file list display
                     const selectedList = document.getElementById('selectedFilesList');
@@ -1330,8 +1446,26 @@ Imidol tab (1)" rows="10"></textarea>
                 resultsSection = document.getElementById('resultsSection');
             }
 
-            resultsCount.textContent = `Found ${totalMatches} matches`;
+            const totalSearched = results.length;
+            const foundTerms = results.filter(r => r.matches.length > 0).length;
+            const notFoundTerms = results.filter(r => r.matches.length === 0).map(r => r.search_term);
+
+            resultsCount.innerHTML =
+                `<b>${totalSearched}</b> searched &nbsp;|&nbsp; ` +
+                `<b style="color:#2e7d32">${foundTerms}</b> found &nbsp;|&nbsp; ` +
+                `<b style="color:#b91c1c">${notFoundTerms.length}</b> not found &nbsp;|&nbsp; ` +
+                `<b>${totalMatches}</b> total matches`;
+
             resultsContainer.innerHTML = '';
+
+            // Not-found summary block
+            if (notFoundTerms.length > 0) {
+                const nfBlock = document.createElement('div');
+                nfBlock.style.cssText = 'background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:16px;';
+                nfBlock.innerHTML = '<b style="color:#b91c1c">Not found (' + notFoundTerms.length + '):</b> ' +
+                    notFoundTerms.map(t => `<span style="display:inline-block;background:#fee2e2;color:#991b1b;border-radius:12px;padding:2px 10px;margin:3px 3px 0;font-size:13px">${t}</span>`).join('');
+                resultsContainer.appendChild(nfBlock);
+            }
 
             results.forEach(result => {
                 if (result.matches.length > 0) {
@@ -1393,28 +1527,19 @@ Imidol tab (1)" rows="10"></textarea>
                     return await resp.json();
                 } catch(e){ return null; }
             },
-            // Build the same styled card HTML used by displayResults, for use inside chat
-            renderResultsHtml: function(results){
-                let html = '';
-                let total = 0;
-                results.forEach(function(r){
-                    if(!r.matches || r.matches.length === 0) return;
-                    total += r.matches.length;
-                    html += '<div style="margin-bottom:10px">';
-                    html += '<div style="font-weight:600;font-size:12px;color:#1d4ed8;margin-bottom:6px;padding:4px 8px;background:#eff6ff;border-radius:6px">🔍 ' + r.search_term + '</div>';
-                    r.matches.forEach(function(med){
-                        html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:5px;box-shadow:0 1px 3px rgba(0,0,0,.06)">';
-                        html += '<div style="font-weight:600;font-size:12px;color:#1e293b;margin-bottom:4px">' + med.name + '</div>';
-                        html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-                        html += '<span style="background:#f0f8ff;color:#2c5aa0;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">' + (med.shop || 'Unknown') + '</span>';
-                        html += '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">' + (med.discount || 'N/A') + '</span>';
-                        html += '</div></div>';
-                    });
-                    html += '</div>';
-                });
-                if(total === 0) html = '<span style="color:#64748b">No matches found.</span>';
-                else html = '<div style="font-size:11px;color:#64748b;margin-bottom:8px">Found <b>' + total + '</b> match' + (total>1?'es':'') + '</div>' + html;
-                return html;
+            // Use the same displayResults() function — show full styled results below, return summary for chat
+            showResults: function(data){
+                const total = data.total_matches || 0;
+                const results = data.results || [];
+                displayResults(results, total, false);
+                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if(total === 0) return 'No matches found.';
+                const searched = results.length;
+                const found = results.filter(function(r){ return r.matches.length > 0; }).length;
+                const nf = searched - found;
+                return '<b>' + searched + '</b> searched → <b style="color:#2e7d32">' + found + '</b> found' +
+                    (nf > 0 ? ', <b style="color:#b91c1c">' + nf + '</b> not found' : '') +
+                    ' (<b>' + total + '</b> matches) — see results below ↓';
             }
         };
     </script>
