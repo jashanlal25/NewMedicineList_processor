@@ -622,6 +622,9 @@ def _generate_html_inner():
     template_path_old = os.path.join(base_dir, 'list_to_htm', 'list.HTM')
     template_path_new = os.path.join(base_dir, 'list_to_htm', 'list_new.HTM')
 
+    # Use first word of title (uppercase) as filename prefix: "SSD MEDICOS" → "SSD"
+    title_prefix = re.sub(r'[^a-zA-Z0-9]', '', title.split()[0]).upper() if title.strip() else 'OFFER_LIST'
+
     response_payload = {
         'success': True,
         'count': len(data_items),
@@ -637,7 +640,7 @@ def _generate_html_inner():
         )
         if err_old:
             return jsonify({'error': err_old}), 500
-        old_filename = f"offer_list_{list_type}{list_no}.htm"
+        old_filename = f"{title_prefix}_{list_type}{list_no}.htm"
         old_token = _store_result({
             'content': html_old, 'filename': old_filename, 'count': len(data_items),
         })
@@ -661,7 +664,7 @@ def _generate_html_inner():
         )
         if err_new:
             return jsonify({'error': err_new}), 500
-        new_filename = f"offer_list_{list_type}{list_no}_new.htm"
+        new_filename = f"{title_prefix}_{list_type}{list_no}_new.htm"
         new_token = _store_result({
             'content': html_new, 'filename': new_filename, 'count': len(items_extended),
         })
