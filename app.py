@@ -139,10 +139,22 @@ def process_htm_content(html_content, decrease_value=1, stock_format=False, new_
         #   Default offer: [Code, Name, Order(qty), Disc%, Bonus, T.P (colspan=2)]
         if stock_format:
             name_index, code_index, disc_index = 2, 1, 3
-            tp_index, bonus_index = 4, None
+            tp_index, bonus_index, tax_index = 4, None, None
         else:
             name_index, code_index, disc_index = 1, 0, 3
-            tp_index, bonus_index = 5, 4
+            bonus_index = 4
+            # Auto-detect TP and Tax columns by checking first item row column count:
+            #   5 cols → basic old (no TP, no Tax)
+            #   6 cols → old with TP, no Tax
+            #   7 cols → old with TP + Tax
+            first_item = items[0] if items else None
+            first_cols = len(first_item.find_all("td")) if first_item else 6
+            if first_cols >= 7:
+                tp_index, tax_index = 5, 6
+            elif first_cols >= 6:
+                tp_index, tax_index = 5, None
+            else:
+                tp_index, tax_index = None, None
 
         for item in items:
             columns = item.find_all("td")
@@ -157,6 +169,9 @@ def process_htm_content(html_content, decrease_value=1, stock_format=False, new_
                 tp_text = (columns[tp_index].text.strip()
                            if tp_index is not None and tp_index < len(columns)
                            else "")
+                tax_text = (columns[tax_index].text.strip()
+                            if tax_index is not None and tax_index < len(columns)
+                            else "0.00")
 
                 # Check if discount is 0.00% and get bonus rate if available
                 if discount_rate == "0.00%" and len(columns) >= 5:
@@ -197,7 +212,7 @@ def process_htm_content(html_content, decrease_value=1, stock_format=False, new_
                     'code': code,
                     'tp': _fmt_tp(tp_text),
                     'bonus': bonus_text,
-                    'tax': "0.00",
+                    'tax': _fmt_tp(tax_text) or "0.00",
                 })
 
     return results
