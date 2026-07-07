@@ -1527,6 +1527,12 @@
                 </div>
                 <div id="fileName" class="file-name" style="display: none;"></div>
 
+                <div style="text-align: center; margin: 10px 0;">
+                    <button type="button" id="pasteToggleBtn" onclick="togglePasteArea()" style="padding:8px 16px; background:linear-gradient(135deg,#6f42c1,#5a32a3); color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer;">📋 Paste Text</button>
+                    <span id="pasteRowCount" style="display:none; margin-left:10px; font-size:13px; color:var(--text-secondary); font-weight:600;"></span>
+                </div>
+                <textarea id="pasteArea" placeholder="Paste your text here...&#10;e.g. Chymrol fort 6%&#10;Artem 40/240mg 200 net&#10;Safepram 5mg Tp" style="width:100%; height:100px; padding:12px; border:2px solid var(--border-color); border-radius:8px; font-family:'Consolas','Monaco',monospace; font-size:14px; resize:vertical; background:var(--input-bg); color:var(--text-primary); display:none;"></textarea>
+
                 <div class="settings-panel" id="settingsPanel" style="display: none;">
                     <h3 class="section-title">⚙️ Processing Settings</h3>
                     <div class="input-group" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
@@ -1549,6 +1555,11 @@
                             <input type="checkbox" id="stockFormat">
                             <span class="checkmark"></span>
                             Stock file format
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="textFormat">
+                            <span class="checkmark"></span>
+                            Text format
                         </label>
                         <label class="checkbox-label">
                             <input type="checkbox" id="newFormat">
@@ -1721,10 +1732,38 @@
         const decreaseValue = document.getElementById('decreaseValue');
         const separatorValue = document.getElementById('separatorValue');
         const stockFormat = document.getElementById('stockFormat');
+        const textFormat = document.getElementById('textFormat');
         const newFormat = document.getElementById('newFormat');
         const extendedOutput = document.getElementById('extendedOutput');
         const processBtn = document.getElementById('processBtn');
         const fileCounter = document.getElementById('fileCounter');
+        const pasteArea = document.getElementById('pasteArea');
+
+        // Show settings panel and row count when text is pasted
+        pasteArea.addEventListener('input', function() {
+            const text = pasteArea.value.trim();
+            const countEl = document.getElementById('pasteRowCount');
+            if (text) {
+                const rows = text.split('\n').filter(l => l.trim()).length;
+                countEl.textContent = rows + ' rows';
+                countEl.style.display = 'inline';
+                settingsPanel.style.display = 'block';
+                fileName.textContent = 'Pasted text';
+                fileName.style.display = 'inline-block';
+            } else {
+                countEl.style.display = 'none';
+                if (!selectedFile) {
+                    settingsPanel.style.display = 'none';
+                    fileName.style.display = 'none';
+                }
+            }
+        });
+
+        function togglePasteArea() {
+            const visible = pasteArea.style.display !== 'none';
+            pasteArea.style.display = visible ? 'none' : 'block';
+            if (!visible) pasteArea.focus();
+        }
 
         function updateFileCounter() {
             fileCounter.textContent = `Files processed: ${fileCount} / ${maxFiles}`;
@@ -1767,47 +1806,103 @@
             fileName.textContent = `Selected: ${file.name}`;
             fileName.style.display = 'inline-block';
 
-            if (isTextFile) {
-                // For text files, process directly without settings
-                processTextFile();
-            } else {
-                // For HTM/HTML files, show settings panel
-                settingsPanel.style.display = 'block';
-            }
+            // Show settings panel for all file types
+            settingsPanel.style.display = 'block';
         }
 
-        // Process text file directly
-        async function processTextFile() {
-            loading.classList.add('show');
-
-            try {
-                const text = await selectedFile.text();
-                const lines = text.trim().split('\n').filter(line => line.trim());
-
-                loading.classList.remove('show');
-
-                addResultCard({
-                    filename: selectedFile.name,
-                    count: lines.length,
-                    text_output: text,
-                    decrease_value: 'N/A',
-                    isTextFile: true
-                });
-
-                resetUploadSection();
-
-            } catch (error) {
-                loading.classList.remove('show');
-                errorMessage.textContent = 'Error reading text file.';
-                errorMessage.classList.add('show');
-            }
-        }
-
-        // Process HTM/HTML file with user settings
+        // Process file or pasted text with user settings
         async function processFile() {
+            const pastedText = pasteArea.value.trim();
+
+            // Handle pasted text
+            if (pastedText) {
+                settingsPanel.style.display = 'none';
+                loading.classList.add('show');
+                try {
+                    const dec = parseFloat(decreaseValue.value) || 0;
+                    const sep = separatorValue.value || '';
+                    let outputText = pastedText;
+                    let count = pastedText.split('\n').filter(l => l.trim()).length;
+
+                    if (textFormat.checked) {
+                        const output = parseTextFormat(pastedText, dec, sep);
+                        outputText = output.text;
+                        count = output.count;
+                    }
+
+                    loading.classList.remove('show');
+                    addResultCard({
+                        filename: 'pasted-text',
+                        count: count,
+                        text_output: outputText,
+                        decrease_value: textFormat.checked ? (dec || 'N/A') : 'N/A',
+                        isTextFile: true
+                    });
+                    resetUploadSection();
+                } catch (error) {
+                    loading.classList.remove('show');
+                    errorMessage.textContent = 'Error processing pasted text.';
+                    errorMessage.classList.add('show');
+                    settingsPanel.style.display = 'block';
+                }
+                return;
+            }
+
             if (!selectedFile) {
-                errorMessage.textContent = 'Please select a file first.';
+                errorMessage.textContent = 'Please select a file or paste text first.';
                 errorMessage.classList.add('show');
+                return;
+            }
+
+            // Text format: process client-side
+            if (isTextFile && textFormat.checked) {
+                settingsPanel.style.display = 'none';
+                loading.classList.add('show');
+                try {
+                    const text = await selectedFile.text();
+                    const dec = parseFloat(decreaseValue.value) || 0;
+                    const sep = separatorValue.value || '';
+                    const output = parseTextFormat(text, dec, sep);
+                    loading.classList.remove('show');
+                    addResultCard({
+                        filename: selectedFile.name,
+                        count: output.count,
+                        text_output: output.text,
+                        decrease_value: dec || 'N/A',
+                        isTextFile: true
+                    });
+                    resetUploadSection();
+                } catch (error) {
+                    loading.classList.remove('show');
+                    errorMessage.textContent = 'Error processing text file.';
+                    errorMessage.classList.add('show');
+                    settingsPanel.style.display = 'block';
+                }
+                return;
+            }
+
+            // Plain text file without text format: show as-is
+            if (isTextFile) {
+                settingsPanel.style.display = 'none';
+                loading.classList.add('show');
+                try {
+                    const text = await selectedFile.text();
+                    const lines = text.trim().split('\n').filter(line => line.trim());
+                    loading.classList.remove('show');
+                    addResultCard({
+                        filename: selectedFile.name,
+                        count: lines.length,
+                        text_output: text,
+                        decrease_value: 'N/A',
+                        isTextFile: true
+                    });
+                    resetUploadSection();
+                } catch (error) {
+                    loading.classList.remove('show');
+                    errorMessage.textContent = 'Error reading text file.';
+                    errorMessage.classList.add('show');
+                    settingsPanel.style.display = 'block';
+                }
                 return;
             }
 
@@ -1855,6 +1950,50 @@
                 errorMessage.classList.add('show');
                 settingsPanel.style.display = 'block';
             }
+        }
+
+        function parseTextFormat(text, decreaseValue, separator) {
+            const lines = text.split('\n');
+            const output = [];
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+
+                let name = '', value = '';
+
+                const pctMatch = line.match(/^(.+?)\s+(\d+\.?\d*)\s*%\.?\s*$/);
+                const netMatch = line.match(/^(.+?)\s+(\d+\.?\d*)\s*net\s*$/i);
+                const tpMatch = line.match(/^(.+?)\s+tp\s*$/i);
+
+                if (pctMatch) {
+                    name = pctMatch[1].trim().replace(/\.+$/, '').trim();
+                    let num = parseFloat(pctMatch[2]);
+                    if (decreaseValue > 0) {
+                        num = Math.max(num - decreaseValue, 0);
+                        value = num.toFixed(2) + '%';
+                    } else {
+                        value = pctMatch[2] + '%';
+                    }
+                } else if (netMatch) {
+                    name = netMatch[1].trim().replace(/\.+$/, '').trim();
+                    value = netMatch[2] + 'net';
+                } else if (tpMatch) {
+                    name = tpMatch[1].trim().replace(/\.+$/, '').trim();
+                    value = 'Tp';
+                } else {
+                    continue;
+                }
+
+                name = name.replace(/\s+/g, ' ').split(' ').map(w =>
+                    w.charAt(0).toUpperCase() + w.slice(1)
+                ).join(' ');
+
+                const sep = separator || '';
+                output.push(`${name}----- ${value}${sep}`);
+            }
+
+            return { text: output.join('\n'), count: output.length };
         }
 
         processBtn.addEventListener('click', processFile);
@@ -1938,8 +2077,12 @@
             decreaseValue.value = 1;
             separatorValue.value = '';
             stockFormat.checked = false;
+            textFormat.checked = false;
             newFormat.checked = false;
             extendedOutput.checked = false;
+            pasteArea.value = '';
+            pasteArea.style.display = 'none';
+            document.getElementById('pasteRowCount').style.display = 'none';
         }
 
         let editorCount = 0;

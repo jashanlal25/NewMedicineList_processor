@@ -987,9 +987,9 @@
                     <button type="button" class="btn-small" onclick="startMarkdown()" style="background: linear-gradient(135deg, #6f42c1, #5a32a3); color: white; padding: 6px 14px; border-radius: 6px; font-size: 12px;">✏️ Write Markdown</button>
                 </div>
                 <div class="file-upload" id="dropZone">
-                    <input type="file" id="fileInput" accept=".txt,.md,.text">
+                    <input type="file" id="fileInput" accept=".txt,.md,.text,.htm,.html">
                     <div class="file-upload-icon">📄</div>
-                    <div class="file-upload-text">Click or drag & drop your text file here<br><small>Format: Item Name----- discount%</small></div>
+                    <div class="file-upload-text">Click or drag & drop your file here<br><small>Supports: .txt, .htm, .html files</small></div>
                 </div>
             </div>
 
@@ -1211,14 +1211,79 @@
 
             const file = fileInput.files[0];
             const reader = new FileReader();
+            const isHtml = /\.(htm|html)$/i.test(file.name);
 
             reader.onload = (e) => {
-                editorTextarea.value = e.target.result;
+                const content = e.target.result;
+                if (isHtml) {
+                    const parsed = parseHtmlFile(content);
+                    editorTextarea.value = parsed.lines;
+                    if (parsed.title) titleInput.value = parsed.title;
+                    if (parsed.listNo) document.getElementById('list_no').value = parsed.listNo;
+                } else {
+                    editorTextarea.value = content;
+                }
                 showEditor();
                 updateItemCount();
             };
 
             reader.readAsText(file);
+        }
+
+        function parseHtmlFile(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const lines = [];
+            let title = '';
+            let listNo = '';
+
+            const newRows = doc.querySelectorAll('tr.item-row[data-name]');
+            if (newRows.length > 0) {
+                newRows.forEach(row => {
+                    const name = row.dataset.name || '';
+                    const disc = row.dataset.disc || '0';
+                    const suffix = row.dataset.discSuffix || '';
+                    const tp = row.dataset.tp || '';
+                    const bonus = row.dataset.bonus || '';
+                    const tax = row.dataset.tax || '';
+                    const discStr = disc + '%' + suffix;
+                    if (tp || bonus || tax) {
+                        lines.push(`${name}----- ${discStr}|${tp}|${bonus}|${tax}`);
+                    } else {
+                        lines.push(`${name}----- ${discStr}`);
+                    }
+                });
+                const titleEl = doc.querySelector('title');
+                if (titleEl) {
+                    const t = titleEl.textContent.replace(/offer list/i, '').trim();
+                    if (t) title = t;
+                }
+            } else {
+                const oldRows = doc.querySelectorAll('tr.item');
+                oldRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 4) {
+                        const name = (cells[1] ? cells[1].textContent : '').trim();
+                        const disc = (cells[3] ? cells[3].textContent : '').trim();
+                        const bonus = (cells[4] ? cells[4].textContent : '').trim();
+                        const tp = cells.length >= 6 ? (cells[5] ? cells[5].textContent : '').trim() : '';
+                        if (!name) return;
+                        if (tp || bonus) {
+                            lines.push(`${name}----- ${disc}|${tp}|${bonus}|`);
+                        } else {
+                            lines.push(`${name}----- ${disc}`);
+                        }
+                    }
+                });
+                const h2 = doc.querySelector('h2');
+                if (h2) title = h2.textContent.trim();
+            }
+
+            const bodyText = doc.body ? doc.body.textContent : html;
+            const listMatch = bodyText.match(/LIST\s*NO\s*[:\s]*(\d+)/i);
+            if (listMatch) listNo = listMatch[1].padStart(6, '0');
+
+            return { lines: lines.join('\n'), title, listNo };
         }
 
         function showEditor() {
@@ -1788,7 +1853,7 @@
                 let parsedName = '';
                 if (line.includes('|')) {
                     const pp = line.split('|');
-                    const mid = pp[1] || '';
+                    const mid = pp[0] || '';
                     const di = mid.indexOf('-----');
                     parsedName = di >= 0 ? mid.substring(0, di).trim() : mid.trim();
                 } else {
@@ -1813,18 +1878,6 @@
             updateItemCount();
             updatePreview();
             savingInProgress = false;
-
-            // On mobile the keyboard closing shifts viewport — scroll saved row back into view
-            const savedName = itemData.name;
-            setTimeout(() => {
-                const rows = document.querySelectorAll('#previewTableBody tr.item-row');
-                for (const row of rows) {
-                    if (row.dataset.name === savedName) {
-                        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                        break;
-                    }
-                }
-            }, 200);
 
             checkPendingEdit();
         }

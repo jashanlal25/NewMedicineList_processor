@@ -654,7 +654,8 @@ def _generate_html_inner():
         items_extended = parse_text_content_extended(text_content)
         if not items_extended:
             return jsonify({'error': 'No valid items for new format'}), 400
-        if not any((it.get('tp') or '').strip() for it in items_extended):
+        has_pipe_data = '|' in text_content
+        if has_pipe_data and not any((it.get('tp') or '').strip() for it in items_extended):
             return jsonify({
                 'error': 'New format needs T.P values. Re-export your TXT in '
                          '"Extended TXT" mode from the home page (or include code|name|tp|bonus|tax).'
