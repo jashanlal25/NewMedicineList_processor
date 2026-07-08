@@ -1824,7 +1824,11 @@
                     let outputText = pastedText;
                     let count = pastedText.split('\n').filter(l => l.trim()).length;
 
-                    if (textFormat.checked) {
+                    if (textFormat.checked && extendedOutput.checked) {
+                        const output = processExtendedFormat(pastedText, dec, sep);
+                        outputText = output.text;
+                        count = output.count;
+                    } else if (textFormat.checked) {
                         const output = parseTextFormat(pastedText, dec, sep);
                         outputText = output.text;
                         count = output.count;
@@ -1996,6 +2000,51 @@
             return { text: output.join('\n'), count: output.length };
         }
 
+        function processExtendedFormat(text, dec, separator) {
+            const lines = text.split('\n');
+            const output = [];
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.includes('-----')) continue;
+
+                const [namePart, rest] = trimmed.split('-----', 2);
+                const name = namePart.trim();
+                if (!rest) { output.push(trimmed); continue; }
+
+                let valuePart, pipeParts;
+                if (rest.includes('|')) {
+                    const pipeIdx = rest.indexOf('|');
+                    valuePart = rest.substring(0, pipeIdx).trim();
+                    pipeParts = rest.substring(pipeIdx);
+                } else {
+                    valuePart = rest.trim();
+                    pipeParts = '';
+                }
+
+                // Apply decrease to percentage values only
+                if (dec > 0) {
+                    const pctMatch = valuePart.match(/^(\d+\.?\d*)\s*(%.*)/);
+                    if (pctMatch) {
+                        let num = parseFloat(pctMatch[1]);
+                        num = Math.max(num - dec, 0);
+                        valuePart = num.toFixed(2) + pctMatch[2];
+                    }
+                }
+
+                const sep = separator || '';
+                if (pipeParts) {
+                    // Clean up pipe spacing
+                    const pipes = pipeParts.split('|').map(p => p.trim());
+                    output.push(`${name}----- ${valuePart}${sep}|${pipes.slice(1).join('|')}`);
+                } else {
+                    output.push(`${name}----- ${valuePart}${sep}`);
+                }
+            }
+
+            return { text: output.join('\n'), count: output.length };
+        }
+
         processBtn.addEventListener('click', processFile);
 
         function addResultCard(data) {
@@ -2049,6 +2098,11 @@
 
             resultsContainer.insertAdjacentHTML('beforeend', cardHtml);
             hideNewEditorSection();
+
+            setTimeout(() => {
+                const card = document.getElementById(cardId);
+                if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
 
             // No preview table on this page — editing done on Make HTML page
             const _fc = fileCount;
